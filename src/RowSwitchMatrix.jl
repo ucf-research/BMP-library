@@ -37,8 +37,42 @@ function RSM_kron(a::RowSwitchMatrix, b::RowSwitchMatrix)::RowSwitchMatrix
     )
 end
 
+function RSM_kron(mats::Vector{RowSwitchMatrix})::RowSwitchMatrix
+    nrows = prod(length.(m.rows for m in mats))
+    ncols = prod(m.ncols for m in mats)
+    array = fill(RSMInt(0), nrows)
+    stride = nrows
+    for m in mats
+        array .*= m.ncols
+        mr = length(m.rows)
+        stride = div(stride, mr) # distance between blocks
+        cnt = div(nrows, stride) # number of blocks
+        for i=0:cnt-1
+            array[i*stride+1:i*stride+stride] .+= (m.rows[i % mr + 1] - 1)
+        end
+    end
+    array .+= 1
+    return RowSwitchMatrix(array, ncols)
+end
+
+function RSM_join(mats::Vector{RowSwitchMatrix})::RowSwitchMatrix
+    nrows = sum(length.(m.rows for m in mats))
+    ncols = sum(m.ncols for m in mats)
+    array = fill(RSMInt(0), nrows)
+    rstride = 0
+    cstride = 0
+    for m in mats
+        mr = length(m.rows)
+        array[rstride+1:rstride+mr] .+= cstride
+        array[rstride+1:rstride+mr] .+= m.rows
+        rstride += mr
+        cstride += m.ncols
+    end
+    return RowSwitchMatrix(array, ncols)
+end
+
 function RSM_matrix(a::RowSwitchMatrix)
-    return [a.rows[i] == j for i=1:length(a.rows), j=1:a.ncols]
+    return [Int64(a.rows[i] == j) for i=1:length(a.rows), j=1:a.ncols]
 end
 
 function SU_decomposition(a::RowSwitchMatrix)
