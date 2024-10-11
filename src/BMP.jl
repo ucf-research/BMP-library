@@ -1,12 +1,14 @@
 include("RowSwitchMatrix.jl")
 
+const BareBMP = Matrix{RowSwitchMatrix}
+
 struct BMP
     M::Matrix{RowSwitchMatrix}
     R::Vector{RSMInt}
     order::Vector{UInt32}
     position::Vector{UInt32}
     function BMP(M::Matrix{RowSwitchMatrix}, R::Vector{<:Integer}, order::Vector{<:Integer})
-        position = fill(0, length(order))
+        position = fill(UInt32(0), length(order))
         # position is the inverse of the permutation given in order
         position[order] .= order
         return new(M, R, order, position)
@@ -14,27 +16,27 @@ struct BMP
 end
 
 # Constructors and initializers
-function BMP(val::Integer, n::Integer)
+function BMP_bare(val::Integer, n::Integer)::BareBMP
     mats = Matrix{RowSwitchMatrix}(undef, (n,2))
     for i=1:n-1
         mats[i,:] = [RowSwitchMatrix(1), RowSwitchMatrix(1)]
     end
     mats[n,1] = RowSwitchMatrix(RSMInt[val+1], 2)
     mats[n,2] = RowSwitchMatrix(RSMInt[val+1], 2)
+    return mats
+end
+
+function BMP(val::Integer, n::Integer)
+    mats = BMP_bare(val, n)
     return BMP(mats, [0,1], collect(1:n))
 end
 
 function BMP(val::Integer, order::Vector{<:Integer})
-    mats = Matrix{RowSwitchMatrix}(undef, (n,2))
-    for i=1:n-1
-        mats[i,:] = [RowSwitchMatrix(1), RowSwitchMatrix(1)]
-    end
-    mats[n,1] = RowSwitchMatrix(RSMInt[val+1], 2)
-    mats[n,2] = RowSwitchMatrix(RSMInt[val+1], 2)
+    mats = BMP_bare(val, n)
     return BMP(mats, [0,1], copy(order))
 end
 
-function BMP_bitline(xi::Integer, n::Integer)
+function BMP_bitline_bare(xi::Integer, n::Integer)::BareBMP
     mats = Matrix{RowSwitchMatrix}(undef, (n,2))
     for i=1:xi-1
         mats[i,:] = [RowSwitchMatrix(1), RowSwitchMatrix(1)]
@@ -45,21 +47,17 @@ function BMP_bitline(xi::Integer, n::Integer)
     for i=xi+1:n
         mats[i,:] = [RowSwitchMatrix(2), RowSwitchMatrix(2)]
     end
+    return mats
+end
+
+function BMP_bitline(xi::Integer, n::Integer)
+    mats = BMP_bitline_bare(xi, n)
     return BMP(mats, [0,1], collect(1:n))
 end
 
-function BMP_bitline(i::Integer, order::Vector{<:Integer})
-    mats = Matrix{RowSwitchMatrix}(undef, (n,2))
-    i = 1
-    while order[i] != xi
-        mats[i,:] = [RowSwitchMatrix(1), RowSwitchMatrix(1)]
-        i += 1
-    end
-    mats[i,1] = RowSwitchMatrix(RSMInt[1], 2)
-    mats[i,2] = RowSwitchMatrix(RSMInt[2], 2)
-    for j=i+1:n
-        mats[j,:] = [RowSwitchMatrix(2), RowSwitchMatrix(2)]
-    end
+function BMP_bitline(xi::Integer, order::Vector{<:Integer})
+    pos = findfirst(order .== xi)
+    mats = BMP_bitline_bare(pos, length(order))
     return BMP(mats, [0,1], copy(order))
 end
 
@@ -68,34 +66,64 @@ function Base.length(bmp::BMP)
     return size(bmp.M, 1)
 end
 
+function BMP_dims(bmp::BareBMP)
+    return [length(m) for m in bmp[:,1]]
+end
+
+function BMP_dims(bmp::BareBMP, i::Integer)
+    return length(bmp[i,1])
+end
+
 function BMP_dims(bmp::BMP)
-    return [length(m) for m in bmp.M[:,1]]
+    return BMP_dims(bmp.M)
 end
 
 function BMP_dims(bmp::BMP, i::Integer)
-    return length(bmp.M[i,1])
+    return BMP_dims(bmp.M, i)
 end
 
-function BMP_complexity(bmp::BMP)
+function BMP_complexity(bmp::BareBMP)
     return maximum(length(m) for m in bmp.M[:,1])
 end
 
+function BMP_complexity(bmp::BMP)
+    return BMP_complexity(bmp.M)
+end
+
+function BMP_volume(bmp::BareBMP, R::Vector{<:Integer}=[0,1])
+    return sum(length(m) for m in bmp[:,1]) + length(R)
+end
+
 function BMP_volume(bmp::BMP)
-    return sum(length(m) for m in bmp.M[:,1]) + length(bmp.R)
+    return BMP_volume(bmp.M, bmp.R)
 end
 
 # Evaluation
-function eval(bmp::BMP, x::BitVector)::BitVector
-    mat = bmp.M[1, x[bmp.order[1]]+1]
-    for i=2:length(bmp)
-        mat = RSM_mult(mat, bmp.M[i, x[bmp.order[i]]+1])
+function eval(bmp::BareBMP, x::BitArray, R::Vector{<:Integer}, order::Vector{<:Integer})::BitArray
+    n = size(bmp, 1)
+    m = length(bmp[1,1].rows)
+    n_samps = div(length(x), size(x, 1))
+    x_ = reshape(x, (n, n_samps))
+    result = BitArray(undef, (m, n_samps))
+    for j=1:n_samps
+        mat = bmp[1, x_[order[1],j]+1]
+        for i=2:n
+            mat = RSM_mult(mat, bmp[i, x_[order[i],j]+1])
+        end
+        result[:,j] .= R[mat.rows]
     end
-    return bmp.R[mat.rows] .== 1
+    shape = [i for i in size(x)]
+    shape[1] = m
+    return reshape(result, Tuple(shape))
 end
 
-function eval(bmp::BMP, x::Vector{<:Integer})
+function eval(bmp::BMP, x::BitArray)::BitArray
+    return eval(bmp.M, x, bmp.R, bmp.order)
+end
+
+function eval(bmp::BMP, x::Array{<:Integer})
     f = eval(bmp, x .!= 0)
-    return Vector{Int64}(f)
+    return Array{eltype(x)}(f)
 end
 
 # Cleaning
@@ -145,22 +173,26 @@ function BMP_clean1_rlstep(mats::Matrix{RowSwitchMatrix})
     return result
 end
 
-function BMP_clean1(bmp::BMP)
-    n = length(bmp)
-    M = copy(bmp.M)
+function BMP_clean1(bmp::BareBMP, R::Vector{<:Integer})::BareBMP
+    n = size(bmp, 1)
+    M = copy(bmp)
     # Left-to-right sweep: eliminate unused rows
     for i=1:n-1
         new_pair = BMP_clean1_lrstep(M[i:i+1,:])
         M[i:i+1,:] .= new_pair
     end
     # Right-to-left sweep: eliminate duplicate equivalent rows
-    S_ = RowSwitchMatrix(bmp.R .+ 1, 2) # Trick to convert R vector to a row switching matrix
+    S_ = RowSwitchMatrix(R .+ 1, 2) # Trick to convert R vector to a row switching matrix
     M[n,:] .= [RSM_mult(M[n,1], S_), RSM_mult(M[n,2], S_)]
     for i=n-1:-1:1
         new_pair = BMP_clean1_rlstep(M[i:i+1,:])
         M[i:i+1,:] .= new_pair
     end
-    return BMP(M, [0,1], copy(bmp.order))
+    return M
+end
+
+function BMP_clean1(bmp::BMP)
+    return BMP(BMP_clean1(bmp.M, bmp.R), [0,1], copy(bmp.order))
 end
 
 function BMP_clean2_step(mats::Matrix{RowSwitchMatrix})
@@ -169,35 +201,116 @@ end
 function BMP_clean2(bmp::BMP)
 end
 
-# Operations
-function BMP_apply_noclean(bmp1::BMP, bmp2::BMP, htab::Vector{<:Integer})
-    n = length(bmp1)
+# APPLY and helper routines
+function BMP_apply_R(R1::Vector{<:Integer}, R2::Vector{<:Integer}, htab::Vector{<:Integer})
+    R = [htab[2*i+j+1] for (j,i) in Iterators.product(R2, R1)]
+    R = reshape(R, length(R))
+    return R
+end
+
+function BMP_apply_R(Rs::Vector{<:Vector{<:Integer}}, htab::Vector{<:Integer})
+    nrows = prod(length.(R for R in Rs))
+    inds = fill(0, length(nrows))
+    stride = nrows
+    for R in Rs
+        R .*= 2
+        mr = length(R)
+        stride = div(stride, mr)
+        cnt = div(nrows, stride)
+        for i=0:cnt-1
+            inds[i*stride+1:i*stride+stride] .+= R[i % mr + 1]
+        end
+    end
+    return htab[inds]
+end
+
+function BMP_apply_noclean(bmp1::BareBMP, bmp2::BareBMP)::BareBMP
+    n = size(bmp1, 1)
     mats = Matrix{RowSwitchMatrix}(undef, (n,2))
     for i=1:n, j=1:2
-        mats[i,j] = RSM_kron(bmp1.M[i,j], bmp2.M[i,j])
+        mats[i,j] = RSM_kron(bmp1[i,j], bmp2[i,j])
     end
-    return BMP(mats, copy(htab), copy(bmp1.order))
+    return mats
+end
+
+function BMP_apply(bmp1::BareBMP, bmp2::BareBMP, htab::Vector{<:Integer})
+    # Assume canonical R
+    return BMP_clean1(BMP_apply_noclean(bmp1, bmp2), htab)
+end
+
+function BMP_apply(bmp1::BareBMP, bmp2::BareBMP, R1::Vector{<:Integer}, R2::Vector{<:Integer}, htab::Vector{<:Integer})
+    return BMP_clean1(BMP_apply_noclean(bmp1, bmp2), BMP_apply_R(R1, R2, htab))
+end
+
+function BMP_apply_noclean(bmp1::BMP, bmp2::BMP, htab::Vector{<:Integer})
+    mats = BMP_apply_noclean(bmp1.M, bmp2.M)
+    return BMP(mats, BMP_apply_R(bmp1.R, bmp2.R, htab), copy(bmp1.order))
 end
 
 function BMP_apply(bmp1::BMP, bmp2::BMP, htab::Vector{<:Integer})
     return BMP_clean1(BMP_apply_noclean(bmp1, bmp2, htab))
 end
 
-function BMP_apply_noclean(bmps::Vector{BMP}, htab::Vector{<:Integer})
-    n = length(bmps[1])
+function BMP_apply_noclean(bmps::Vector{BareBMP})::BareBMP
+    n = size(bmps[1], 1)
     mats = Matrix{RowSwitchMatrix}(undef, (n,2))
     for i=1:n, j=1:2
-        m = bmps[1].M[i,j]
-        for k=2:length(bmps)
-            mats[i,j] = RSM_kron(m, bmps[k].M[i,j])
-        end
+        mats[i,j] = RSM_kron([M[i,j] for M in bmps])
     end
-    return BMP(mats, copy(htab), copy(bmps[1].order))
+    return mats
+end
+
+function BMP_apply(bmps::Vector{BareBMP}, htab::Vector{<:Integer})
+    return BMP_clean1(BMP_apply_noclean(bmps), htab)
+end
+
+function BMP_apply(bmps::Vector{BareBMP}, Rs::Vector{<:Vector{<:Integer}}, htab::Vector{<:Integer})
+    return BMP_clean1(BMP_apply_noclean(bmps), BMP_apply_R(Rs, htab))
+end
+
+function BMP_apply_noclean(bmps::Vector{BMP}, htab::Vector{<:Integer})
+    mats = BMP_apply_noclean([bmp.M for bmp in bmps])
+    return BMP(mats, BMP_apply_R([bmp.R for bmp in bmps]), copy(bmps[1].order))
 end
 
 function BMP_apply(bmps::Vector{BMP}, htab::Vector{<:Integer})
     return BMP_clean1(BMP_apply_noclean(bmps, htab))
 end
 
-function BMP_swap(bmp::BMP, i::Integer)
+function BMP_swap!(bmp::BareBMP, i::Integer)
+    mats = bmp[i:i+1,:]
+    # Unique elements
+    U = Dict{Tuple{RSMInt,RSMInt}, RSMInt}()
+    for pair in zip(mats[1,1].rows, mats[1,2].rows)
+        i1, i2 = pair
+        for j=1:2
+            get!(U, (mats[2,j].rows[i1], mats[2,j].rows[i2]), length(U)+1)
+        end
+    end
+    # Left matrices
+    L0 = [get(U, (mats[2,1].rows[i1], mats[2,1].rows[i2]), 0)
+        for (i1,i2) in zip(mats[1,1].rows, mats[1,2].rows)]
+    bmp[i,1] = RowSwitchMatrix(L0, length(U))
+    L1 = [get(U, (mats[2,2].rows[i1], mats[2,2].rows[i2]), 0)
+        for (i1,i2) in zip(mats[1,1].rows, mats[1,2].rows)]
+    bmp[i,2] = RowSwitchMatrix(L1, length(U))
+    # Right matrices
+    R0 = fill(RSMInt(0), length(U))
+    R1 = fill(RSMInt(1), length(U))
+    for (k,v) in pairs(U)
+        R0[v] = k[1]
+        R1[v] = k[2]
+    end
+    bmp[i+1,1] = RowSwitchMatrix(R0, mats[2,1].ncols)
+    bmp[i+1,2] = RowSwitchMatrix(R1, mats[2,2].ncols)
 end
+
+function BMP_swap!(bmp::BMP, i::Integer)
+    BMP_swap!(bmp.M, i)
+    temp = bmp.order[i]
+    bmp.order[i] = bmp.order[i+1]
+    bmp.order[i+1] = temp
+    bmp.position[bmp.order[i]] = i
+    bmp.position[bmp.order[i+1]] = i+1
+end
+
