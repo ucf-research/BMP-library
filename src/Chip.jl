@@ -38,6 +38,16 @@ function Chip_apply!(chip::Chip, tab::Vector{<:Integer}, bits::Vector{<:Integer}
     end
 end
 
+function Chip_minapply!(chip::Chip, tab::Vector{<:Integer}, bits::Vector{<:Integer})
+    sum_bmp, U = BMP_minapply(chip.bitlines[bits])
+    n_bits = length(bits)
+    for (i,b) in zip(n_bits-1:-1:0, bits)
+        bit_tab = tab .>> i .& 1
+        R = BMP_minapply_R(U, fill([0,1], length(bits)), bit_tab)
+        chip.bitlines[b] = BMP_clean1_rl(sum_bmp, R)
+    end
+end
+
 function Chip_apply!(chip::Chip, g::CircuitGate)
     Chip_apply!(chip, g.tab, g.bits)
 end

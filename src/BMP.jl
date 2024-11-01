@@ -67,11 +67,11 @@ function Base.length(bmp::BMP)
 end
 
 function BMP_dims(bmp::BareBMP)
-    return [length(m) for m in bmp[:,1]]
+    return [length(m.rows) for m in bmp[:,1]]
 end
 
 function BMP_dims(bmp::BareBMP, i::Integer)
-    return length(bmp[i,1])
+    return length(bmp[i,1].rows)
 end
 
 function BMP_dims(bmp::BMP)
@@ -83,7 +83,7 @@ function BMP_dims(bmp::BMP, i::Integer)
 end
 
 function BMP_complexity(bmp::BareBMP)
-    return maximum(length(m) for m in bmp.M[:,1])
+    return maximum(length(m.rows) for m in bmp.M[:,1])
 end
 
 function BMP_complexity(bmp::BMP)
@@ -91,7 +91,7 @@ function BMP_complexity(bmp::BMP)
 end
 
 function BMP_volume(bmp::BareBMP, R::Vector{<:Integer}=[0,1])
-    return sum(length(m) for m in bmp[:,1]) + length(R)
+    return sum(length(m.rows) for m in bmp[:,1]) + length(R)
 end
 
 function BMP_volume(bmp::BMP)
@@ -173,6 +173,22 @@ function BMP_clean1_rlstep(mats::Matrix{RowSwitchMatrix})
     return result
 end
 
+function BMP_clean1_rl(bmp::BareBMP, R::Vector{<:Integer})::BareBMP
+    n = size(bmp, 1)
+    M = copy(bmp)
+    S_ = RowSwitchMatrix(R .+ 1, 2) # Trick to convert R vector to a row switching matrix
+    M[n,:] .= [RSM_mult(M[n,1], S_), RSM_mult(M[n,2], S_)]
+    for i=n-1:-1:1
+        new_pair = BMP_clean1_rlstep(M[i:i+1,:])
+        M[i:i+1,:] .= new_pair
+    end
+    return M
+end
+
+function BMP_clean1_rl(bmp::BMP)
+    return BMP(BMP_clean1_rl(bmp.M, bmp.R), [0,1], copy(bmp.order))
+end
+
 function BMP_clean1(bmp::BareBMP, R::Vector{<:Integer})::BareBMP
     n = size(bmp, 1)
     M = copy(bmp)
@@ -210,10 +226,10 @@ end
 
 function BMP_apply_R(Rs::Vector{<:Vector{<:Integer}}, htab::Vector{<:Integer})
     nrows = prod(length.(R for R in Rs))
-    inds = fill(0, length(nrows))
+    inds = fill(0, nrows)
     stride = nrows
     for R in Rs
-        R .*= 2
+        inds .*= 2
         mr = length(R)
         stride = div(stride, mr)
         cnt = div(nrows, stride)
@@ -221,7 +237,7 @@ function BMP_apply_R(Rs::Vector{<:Vector{<:Integer}}, htab::Vector{<:Integer})
             inds[i*stride+1:i*stride+stride] .+= R[i % mr + 1]
         end
     end
-    return htab[inds]
+    return htab[inds .+ 1]
 end
 
 function BMP_apply_noclean(bmp1::BareBMP, bmp2::BareBMP)::BareBMP
@@ -277,6 +293,96 @@ function BMP_apply(bmps::Vector{BMP}, htab::Vector{<:Integer})
     return BMP_clean1(BMP_apply_noclean(bmps, htab))
 end
 
+# Alternative APPLY algorithm, faster in a lot of cases
+function BMP_minapply(
+    bmp1::BareBMP,
+    bmp2::BareBMP
+)
+    n = size(bmp1,1)
+    U = [(RSMInt(1),RSMInt(1))]
+    mats = Matrix{RowSwitchMatrix}(undef, (n,2))
+    for i=1:size(bmp1,1)
+        A = Dict{Tuple{RSMInt, RSMInt}, RSMInt}()
+        S0 = [get!(A, (bmp1[i,1].rows[i1], bmp2[i,1].rows[i2]), length(A)+1)
+            for (i1, i2) in U]
+        S1 = [get!(A, (bmp1[i,2].rows[i1], bmp2[i,2].rows[i2]), length(A)+1)
+            for (i1, i2) in U]
+        mats[i,1] = RowSwitchMatrix(S0, length(A))
+        mats[i,2] = RowSwitchMatrix(S1, length(A))
+        U = fill((RSMInt(0), RSMInt(0)), length(A))
+        for k in keys(A)
+            U[A[k]] = k
+        end
+    end
+    return (mats, U)
+end
+
+function BMP_minapply_R(
+    U::Vector{Tuple{RSMInt, RSMInt}},
+    R1::Vector{<:Integer},
+    R2::Vector{<:Integer},
+    htab::Vector{<:Integer}
+)
+    R = fill(0, length(U))
+    for (i1, i2) in U
+        val = 2 * R1[i1] + R2[i2]
+        R[i] = htab[val+1]
+    end
+    return R
+end
+
+function BMP_minapply(bmp1::BMP, bmp2::BMP, htab::Vector{<:Integer})::BMP
+    n = length(bmp1)
+    M, U = BMP_minapply(bmp1.M, bmp2.M)
+    return BMP(M, BMP_minapply_R(U, bmp1.R, bmp2.R, htab), copy(bmp1.order))
+end
+
+function BMP_minapply(bmps::Vector{BareBMP})
+    n = size(bmps[1],1)
+    k = length(bmps)
+    U = fill(RSMInt(1), (k,1))
+    mats = Matrix{RowSwitchMatrix}(undef, (n,2))
+    for i=1:size(bmps[1],1)
+        A = Dict{Vector{RSMInt}, RSMInt}()
+        S0 = [get!(A, [bmps[j][i,1].rows[U[j,r]] for j=1:k], length(A)+1)
+            for r=1:size(U,2)]
+        S1 = [get!(A, [bmps[j][i,2].rows[U[j,r]] for j=1:k], length(A)+1)
+            for r=1:size(U,2)]
+        mats[i,1] = RowSwitchMatrix(S0, length(A))
+        mats[i,2] = RowSwitchMatrix(S1, length(A))
+        U = fill(RSMInt(1), (k,length(A)))
+        for key in keys(A)
+            U[:, A[key]] .= key
+        end
+    end
+    return (mats, U)
+end
+
+function BMP_minapply_R(
+    U::Matrix{RSMInt},
+    Rs::Vector{<:Vector{<:Integer}},
+    htab::Vector{<:Integer}
+)
+    R = fill(0, size(U,2))
+    k = size(U,1)
+    for i=1:size(U,2)
+        val = 0
+        for j=1:k
+            val = 2*val + Rs[k][U[j,i]]
+        end
+        R[i] = htab[val+1]
+    end
+    return R
+end
+
+function BMP_minapply(bmps::Vector{BMP}, htab::Vector{<:Integer})::BMP
+    n = length(bmps[1])
+    M, U = BMP_minapply([bmp.M for bmp in bmps])
+    R = BMP_minapply_R(U, [bmp.R for bmp in bmps], htab)
+    return BMP_clean1_rl(BMP(M, R, copy(bmps[1].order)))
+end
+
+# SWAP functions
 function BMP_swap!(bmp::BareBMP, i::Integer)
     mats = bmp[i:i+1,:]
     # Unique elements
