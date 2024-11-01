@@ -71,6 +71,16 @@ function RSM_join(mats::Vector{RowSwitchMatrix})::RowSwitchMatrix
     return RowSwitchMatrix(array, ncols)
 end
 
+function RSM_bitmatrix(a::RowSwitchMatrix)
+    nr = length(a.rows)
+    nc = a.ncols
+    result = BitMatrix(undef, (nr, nc))
+    for i=1:nr, j=1:nc
+        result[i,j] = a.rows[i] == j
+    end
+    return result
+end
+
 function RSM_matrix(a::RowSwitchMatrix)
     return [Int64(a.rows[i] == j) for i=1:length(a.rows), j=1:a.ncols]
 end
