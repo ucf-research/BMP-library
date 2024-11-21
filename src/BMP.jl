@@ -32,7 +32,7 @@ function BMP(val::Integer, n::Integer)
 end
 
 function BMP(val::Integer, order::Vector{<:Integer})
-    mats = BMP_bare(val, n)
+    mats = BMP_bare(val, length(order))
     return BMP(mats, [0,1], copy(order))
 end
 
@@ -286,7 +286,7 @@ end
 
 function BMP_apply_noclean(bmps::Vector{BMP}, htab::Vector{<:Integer})
     mats = BMP_apply_noclean([bmp.M for bmp in bmps])
-    return BMP(mats, BMP_apply_R([bmp.R for bmp in bmps]), copy(bmps[1].order))
+    return BMP(mats, BMP_apply_R([bmp.R for bmp in bmps], htab), copy(bmps[1].order))
 end
 
 function BMP_apply(bmps::Vector{BMP}, htab::Vector{<:Integer})
@@ -333,7 +333,6 @@ function BMP_minapply_R(
 end
 
 function BMP_minapply(bmp1::BMP, bmp2::BMP, htab::Vector{<:Integer})::BMP
-    n = length(bmp1)
     M, U = BMP_minapply(bmp1.M, bmp2.M)
     return BMP(M, BMP_minapply_R(U, bmp1.R, bmp2.R, htab), copy(bmp1.order))
 end
@@ -377,7 +376,6 @@ function BMP_minapply_R(
 end
 
 function BMP_minapply(bmps::Vector{BMP}, htab::Vector{<:Integer})::BMP
-    n = length(bmps[1])
     M, U = BMP_minapply([bmp.M for bmp in bmps])
     R = BMP_minapply_R(U, [bmp.R for bmp in bmps], htab)
     return BMP_clean1_rl(BMP(M, R, copy(bmps[1].order)))
