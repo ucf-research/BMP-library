@@ -324,7 +324,8 @@ function BMP_minapply_R(
     htab::Vector{<:Integer}
 )
     R = fill(0, length(U))
-    for (i1, i2) in U
+    for (i,pair) in enumerate(U)
+        i1, i2 = pair
         val = 2 * R1[i1] + R2[i2]
         R[i] = htab[val+1]
     end
@@ -418,5 +419,21 @@ function BMP_swap!(bmp::BMP, i::Integer)
     bmp.order[i+1] = temp
     bmp.position[bmp.order[i]] = i
     bmp.position[bmp.order[i+1]] = i+1
+end
+
+# JOIN
+function BMP_join(bmps::Vector{BMP})
+    n = size(bmps[1].M, 1)
+    mats = Matrix{RowSwitchMatrix}(undef, (n, 2))
+    for i=1:n, j=1:2
+        mats[i,j] = RSM_join([bmp.M[i,j] for bmp in bmps])
+    end
+    R = fill(0, sum(length.(bmp.R for bmp in bmps)))
+    stride = 0
+    for bmp in bmps
+        R[stride+1:stride+length(bmp.R)] .= bmp.R
+        stride += length(bmp.R)
+    end
+    return BMP_clean1(BMP(mats, R, copy(bmps[1].order)))
 end
 
