@@ -98,6 +98,26 @@ function partial_order!(bmp::BMP, pord::Vector{<:Integer})
     end
 end
 
+function reconstruct_ordering!(
+    bmp::BMP,
+    pord::Vector{<:Integer},
+    min_vol::Integer,
+    min_order::Vector{<:Integer}
+)
+    for (dest, var) in enumerate(pord)
+        src = bmp.position[var]
+        for i=src-1:-1:dest
+            BMP_swap!(bmp, i)
+            vol = BMP_volume(bmp)
+            if vol < min_vol
+                min_vol = vol
+                min_order .= bmp.order
+            end
+        end
+    end
+    return min_vol
+end
+
 function trace_path(state::BitVector, prev::Dict{BitVector, UInt64})
     state_ = copy(state)
     k = count(state_)
@@ -110,7 +130,7 @@ function trace_path(state::BitVector, prev::Dict{BitVector, UInt64})
     return pord
 end
 
-function exact_minimize!(bmp::BMP)
+function basic_exact_minimize!(bmp::BMP)
     n = length(bmp)
     # Initialization of the maps
     g = Dict{BitVector, UInt64}()
@@ -160,6 +180,82 @@ function exact_minimize!(bmp::BMP)
                 end
             end
             update!(pq, newstate, newcost+h[newstate])
+        end
+    end
+end
+
+function exact_minimize!(bmp::BMP)
+    n = length(bmp)
+    # Initialization of the maps
+    g = Dict{BitVector, UInt64}()
+    h = Dict{BitVector, UInt64}()
+    lastvar = Dict{BitVector, UInt64}()
+    # The upper bound
+    min_vol = BMP_volume(bmp)
+    min_order = copy(bmp.order)
+    # The priority queue
+    pq = CustomHeap()
+    zero_state = falses(n)
+    g[zero_state] = 0
+    h[zero_state] = 0
+    lastvar[zero_state] = 0
+    update!(pq, zero_state, 0)
+    # Loop
+    found = false
+    while !found
+        cost, state = pop!(pq)
+        # Abort if the lower bound exceeds the upper bound
+        if cost >= min_vol
+            found = true
+            partial_order!(bmp, min_order)
+            break
+        end
+        # Reconstruct partial variable ordering & update bounds
+        path = trace_path(state, lastvar)
+        k = length(path)
+        min_vol = reconstruct_ordering!(bmp, path, min_vol, min_order)
+        # Abort if the target state has been reached
+        if k == n
+            found = true
+            break
+        end
+        # Insert successor states to the queue
+        for i=1:n
+            if state[i]
+                continue
+            end
+            newstate = copy(state)
+            newstate[i] = true
+            newcost = g[state] + BMP_dims(bmp, k+1)
+            if Base.haskey(g, newstate)
+                if newcost >= g[newstate]
+                    # Shorter path already known, skip this state
+                    continue
+                end
+            end
+            g[newstate] = newcost
+            lastvar[newstate] = i
+            # Compute the lower bound estimate if necessary
+            if !Base.haskey(h, newstate) && newcost + (n-k-1) < min_vol
+                src = bmp.position[i]
+                for ind=src-1:-1:k+1
+                    BMP_swap!(bmp, ind)
+                    vol = BMP_volume(bmp)
+                    if vol < min_vol
+                        min_order .= bmp.order
+                    end
+                end
+                if k < n-1
+                    h[newstate] = BMP_dims(bmp, k+2) + (n-k-2)
+                else
+                    h[newstate] = 0
+                end
+            end
+            # Add the successor state to the queue if necessary
+            lb = h[newstate]
+            if newcost + lb < min_vol
+                update!(pq, newstate, newcost + lb)
+            end
         end
     end
 end

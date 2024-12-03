@@ -30,17 +30,63 @@ function brute_force!(bmp::BMP)
 end
 
 function Astar!(bmp::BMP)
+    basic_exact_minimize!(bmp)
+    return (BMP_volume(bmp), copy(bmp.order))
+end
+
+function Astar_BB!(bmp::BMP)
     exact_minimize!(bmp)
     return (BMP_volume(bmp), copy(bmp.order))
 end
 
-let
-    n = 5
+function benchmark_all(n::Integer)
     f = rand(0:1, 2^n)
     bmp1 = generate_function_bmp(n, f)
     bmp2 = generate_function_bmp(n, f)
+    bmp3 = generate_function_bmp(n, f)
     v1, ord1 = @time brute_force!(bmp1)
     v2, ord2 = @time Astar!(bmp2)
-    @show v1, ord1
-    @show v2, ord2
+    v3, ord3 = @time Astar_BB!(bmp3)
+    println("n = ", n)
+    @show v1, Vector{Int64}(ord1)
+    @show v2, Vector{Int64}(ord2)
+    @show v3, Vector{Int64}(ord3)
+    println()
+end
+
+function benchmark_smart(n::Integer)
+    f = rand(0:1, 2^n)
+    bmp1 = generate_function_bmp(n, f)
+    bmp2 = generate_function_bmp(n, f)
+    v1, ord1 = @time Astar!(bmp1)
+    v2, ord2 = @time Astar_BB!(bmp2)
+    println("n = ", n)
+    @show v1, Vector{Int64}(ord1)
+    @show v2, Vector{Int64}(ord2)
+    println()
+end
+
+let
+    println("Format: ")
+    println(" Brute-force search")
+    println(" Basic A* search")
+    println(" A* w/ branch-and-bound")
+    println()
+    benchmark_all(4)
+    benchmark_all(4)
+    benchmark_all(5)
+    benchmark_all(6)
+    benchmark_all(7)
+    benchmark_all(8)
+    benchmark_all(9)
+    benchmark_all(10)
+    println("Format: ")
+    println(" Basic A* search")
+    println(" A* w/ branch-and-bound")
+    println()
+    benchmark_smart(12)
+    benchmark_smart(13)
+    benchmark_smart(14)
+    benchmark_smart(15)
+    benchmark_smart(16)
 end
