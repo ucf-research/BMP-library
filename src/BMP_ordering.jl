@@ -1,5 +1,6 @@
 include("../src/BMP.jl")
 
+# A heap based priority queue used for exact minimization
 struct CustomHeap
     costs::Vector{Tuple{UInt64, BitVector}}
     states::Dict{BitVector, UInt64}
@@ -89,6 +90,7 @@ function pop!(heap::CustomHeap)
     return (c,s)
 end
 
+# Other helper functions for exact minimization
 function partial_order!(bmp::BMP, pord::Vector{<:Integer})
     for (dest, var) in enumerate(pord)
         src = bmp.position[var]
@@ -130,6 +132,7 @@ function trace_path(state::BitVector, prev::Dict{BitVector, UInt64})
     return pord
 end
 
+# A* based exact minimization algorithm
 function basic_exact_minimize!(bmp::BMP)
     n = length(bmp)
     # Initialization of the maps
@@ -184,6 +187,7 @@ function basic_exact_minimize!(bmp::BMP)
     end
 end
 
+# A* based algorithm augmented by branch-and-bound optimizations
 function exact_minimize!(bmp::BMP)
     n = length(bmp)
     # Initialization of the maps
@@ -255,6 +259,80 @@ function exact_minimize!(bmp::BMP)
             lb = h[newstate]
             if newcost + lb < min_vol
                 update!(pq, newstate, newcost + lb)
+            end
+        end
+    end
+end
+
+# Sifting algorithm for dynamic variable reordering
+function sift!(bmp::BMP, n_iters::Integer=1)
+    n = length(bmp)
+    for iter=1:n_iters
+        for var_i=1:n
+            pos = bmp.position[var_i]
+            min_vol = BMP_volume(bmp)
+            min_pos = pos
+            for i=Iterators.flatten((pos-1:-1:1, 1:n-1))
+                BMP_swap!(bmp, i)
+                vol = BMP_volume(bmp)
+                if vol < min_vol
+                    min_vol = vol
+                    min_pos = bmp.position[var_i]
+                end
+            end
+            for i=n-1:-1:min_pos
+                BMP_swap!(bmp, i)
+            end
+        end
+    end
+end
+
+function log_sift!(bmp::BMP, n_iters::Integer=1)
+    n = length(bmp)
+    for iter=1:n_iters
+        println("Iteration: ", iter)
+        for var_i=1:n
+            pos = bmp.position[var_i]
+            min_vol = BMP_volume(bmp)
+            min_pos = pos
+            println(
+                "  Variable: ",
+                var_i,
+                ", initial position: ",
+                pos,
+                ", initial volume: ",
+                min_vol,
+                ", initial order: ",
+                Vector{Int64}(bmp.order)
+            )
+            for i=Iterators.flatten((pos-1:-1:1, 1:n-1))
+                BMP_swap!(bmp, i)
+                vol = BMP_volume(bmp)
+                println(
+                    "    Current position: ",
+                    bmp.position[var_i],
+                    ", current volume: ",
+                    vol,
+                    ", current order: ",
+                    Vector{Int64}(bmp.order)
+                )
+                if vol < min_vol
+                    min_vol = vol
+                    min_pos = bmp.position[var_i]
+                end
+            end
+            println("  Minimum position: ", min_pos, ", minimum volume: ", min_vol)
+            for i=n-1:-1:min_pos
+                BMP_swap!(bmp, i)
+                vol = BMP_volume(bmp)
+                println(
+                    "    Current position: ",
+                    bmp.position[var_i],
+                    ", current volume: ",
+                    vol,
+                    ", current order: ",
+                    Vector{Int64}(bmp.order)
+                )
             end
         end
     end
