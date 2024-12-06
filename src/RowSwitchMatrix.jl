@@ -25,6 +25,12 @@ function RSM_mult(a::RowSwitchMatrix, b::RowSwitchMatrix)::RowSwitchMatrix
     return RowSwitchMatrix(b.rows[a.rows], b.ncols)
 end
 
+function RSM_mult_inplace(a::Vector{<:Integer}, b::RowSwitchMatrix)
+    for i in eachindex(a)
+        a[i] = b.rows[a[i]]
+    end
+end
+
 function RSM_kron(a::RowSwitchMatrix, b::RowSwitchMatrix)::RowSwitchMatrix
     Na = length(a.rows)
     Nb = length(b.rows)
