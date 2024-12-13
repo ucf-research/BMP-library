@@ -24,7 +24,7 @@ function eval(circuit::Circuit, input::BitArray)
         throw(DimensionMismatch("The circuit input length and the number of circuit registers don't match."))
     end
     input_ = reshape(copy(input), (n, div(length(input), n)))
-    for j=1:size(input_, 2)
+    for j in axes(input_, 2)
         for g in circuit.gates
             val = 0
             for b in g.bits
