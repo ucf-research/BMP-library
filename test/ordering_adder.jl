@@ -73,7 +73,9 @@ let
     v1, ord1 = @time Astar!(adder1)
     v2, ord2 = @time Astar_BB!(adder2)
     v3, ord3 = @time dynamic!(adder3)
+    v4, ord4 = @time Astar_BB!(adder3)
     @show v1, Vector{Int64}(ord1)
     @show v2, Vector{Int64}(ord2)
     @show v3, Vector{Int64}(ord3)
+    @show v4, Vector{Int64}(ord4)
 end
