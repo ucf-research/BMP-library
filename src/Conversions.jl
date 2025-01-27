@@ -34,7 +34,7 @@ function BMP(bdd::BDD)
         end
         mats[i,j] = RowSwitchMatrix(level_arr[i,j], ncols)
     end
-    return BMP(mats, R, bdd.order)
+    return BMP(mats, R, copy(bdd.order))
 end
 
 function BDD(bmp::BMP)
