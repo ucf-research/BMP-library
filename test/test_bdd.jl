@@ -1,4 +1,4 @@
-include("../src/BDD.jl")
+include("../src/Conversions.jl")
 
 let
     bdd = BDD([
@@ -16,12 +16,16 @@ let
         nn = Tuple{Int64, Int64, Int64}(nd)
         println("\t$i\t$nn")
     end
+    bmp = BMP(bdd)
+    println("Corresponding BMP size: ", BMP_volume(bmp))
     println()
     newbdd = BDD_reduce(bdd)
     for (i, nd) in enumerate(newbdd.nodes)
         nn = Tuple{Int64, Int64, Int64}(nd)
         println("\t$i\t$nn")
     end
+    newbmp = BMP(newbdd)
+    println("Corresponding BMP size: ", BMP_volume(newbmp))
     println()
     n = 3
     test_input = BitArray(undef, (n, 2^n))
@@ -29,4 +33,6 @@ let
         test_input[j, i+1] = i >> (n-j) & 1
     end
     @show all(eval(bdd, test_input) .== eval(newbdd, test_input))
+    @show all(eval(bdd, test_input) .== eval(bmp, test_input))
+    @show all(eval(bdd, test_input) .== eval(newbmp, test_input))
 end
