@@ -7,7 +7,7 @@ struct BDD
     function BDD(nodes, outputs, order)
         position = fill(UInt32(0), length(order))
         position[order] .= order
-        return new(nodes, copy(outputs), copy(order), position)
+        return new(nodes, outputs, order, position)
     end
 end
 
