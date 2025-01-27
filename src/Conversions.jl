@@ -38,4 +38,22 @@ function BMP(bdd::BDD)
 end
 
 function BDD(bmp::BMP)
+    n = length(bmp)
+    V = BMP_volume(bmp)
+    nodes = Vector{BDDNode}(undef, V)
+    for (i,val) in enumerate(bmp.R)
+        nodes[i] = (n+1, 0, val)
+    end
+    cnt = length(bmp.R)
+    ref_cnt = 0
+    for i=n:-1:1
+        for (j,p) in enumerate(zip(bmp.M[i,1].rows, bmp.M[i,2].rows))
+            nodes[cnt+j] = (i, p[1]+ref_cnt, p[2]+ref_cnt)
+        end
+        chi = length(bmp.M[i,1].rows)
+        ref_cnt = cnt
+        cnt = cnt + chi
+    end
+    nout = length(bmp.M[1,1].rows)
+    return BDD(nodes, collect(ref_cnt+1:ref_cnt+nout), copy(bmp.order))
 end

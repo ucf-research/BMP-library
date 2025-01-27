@@ -27,6 +27,13 @@ let
     newbmp = BMP(newbdd)
     println("Corresponding BMP size: ", BMP_volume(newbmp))
     println()
+    bdd_ = BDD(newbmp)
+    for (i, nd) in enumerate(bdd_.nodes)
+        nn = Tuple{Int64, Int64, Int64}(nd)
+        println("\t$i\t$nn")
+    end
+    println()
+    #
     n = 3
     test_input = BitArray(undef, (n, 2^n))
     for j=1:n, i=0:2^n-1
@@ -35,4 +42,5 @@ let
     @show all(eval(bdd, test_input) .== eval(newbdd, test_input))
     @show all(eval(bdd, test_input) .== eval(bmp, test_input))
     @show all(eval(bdd, test_input) .== eval(newbmp, test_input))
+    @show all(eval(bdd, test_input) .== eval(bdd_, test_input))
 end
