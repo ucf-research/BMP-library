@@ -192,6 +192,20 @@ function BMP_clean1_rl(bmp::BMP)
     return BMP(BMP_clean1_rl(bmp.M, bmp.R), [0,1], copy(bmp.order))
 end
 
+function BMP_clean1_lr(bmp::BareBMP)::BareBMP
+    n = size(bmp, 1)
+    M = copy(bmp)
+    for i=1:n-1
+        new_pair = BMP_clean1_lrstep(M[i:i+1,:])
+        M[i:i+1,:] .= new_pair
+    end
+    return M
+end
+
+function BMP_clean1_lr(bmp::BMP)
+    return BMP(BMP_clean1_lr(bmp.M), copy(bmp.R), copy(bmp.order))
+end
+
 function BMP_clean1(bmp::BareBMP, R::Vector{<:Integer})::BareBMP
     n = size(bmp, 1)
     M = copy(bmp)
