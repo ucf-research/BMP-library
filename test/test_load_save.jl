@@ -1,4 +1,4 @@
-include("../src/BMP.jl")
+include("../src/Conversions.jl")
 
 using Random
 
@@ -13,7 +13,11 @@ function random_bmp(n::Integer)
 end
 
 function all_inputs(n::Integer)
-    return [val >> i & 1 for i=n-1:-1:0, val=0:2^n-1]
+    result = BitMatrix(undef, (n, 2^n))
+    for val=0:2^n-1, i=1:n
+        result[i, val+1] = val >> (n-1) & 1
+    end
+    return result
 end
 
 let
@@ -23,4 +27,9 @@ let
     ff = @time BMP_load("test_bmp.txt")
     inp = all_inputs(n)
     @show all(eval(f, inp) .== eval(f, inp))
+    #
+    bdd = BDD(f)
+    @time BDD_save("test_bdd.txt", bdd)
+    bdd_ = @time BDD_load("test_bdd.txt")
+    @show all(eval(bdd, inp) .== eval(bdd, inp))
 end

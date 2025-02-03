@@ -62,3 +62,36 @@ function eval(bdd::BDD, x::BitArray)
     shape[1] = m
     return reshape(result, Tuple(shape))
 end
+
+function BDD_save(fpath::String, bdd::BDD)
+    f = open(fpath, "w")
+    n = length(bdd.order)
+    n_out = length(bdd.outputs)
+    n_nodes = length(bdd.nodes)
+    println(f, "$n $n_out $n_nodes")
+    for var_idx in bdd.order
+        print(f, "$var_idx ")
+    end
+    println(f)
+    for out_node in bdd.outputs
+        print(f, "$out_node ")
+    end
+    println(f)
+    for (var_idx, lchild, rchild) in bdd.nodes
+        println(f, "$var_idx $lchild $rchild")
+    end
+    close(f)
+end
+
+function BDD_load(fpath::String)
+    f = open(fpath)
+    n, n_out, n_nodes = parse.(UInt32, split(readline(f)))
+    order = parse.(UInt32, split(readline(f)))
+    outputs = parse.(UInt32, split(readline(f)))
+    nodes = Vector{BDDNode}(undef, n_nodes)
+    for i=1:n_nodes
+        var_idx, lchild, rchild = parse.(UInt32, split(readline(f)))
+        nodes[i] = (var_idx, lchild, rchild)
+    end
+    return BDD(nodes, outputs, order)
+end
