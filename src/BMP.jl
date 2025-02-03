@@ -511,3 +511,56 @@ function BMP_join(bmps::Vector{BMP})
     return BMP_clean1(BMP(mats, R, copy(bmps[1].order)))
 end
 
+# Save and load BMPs
+function BMP_save(fpath::String, bmp::BMP)
+    f = open(fpath, "w")
+    n = length(bmp)
+    println(f, "$n")
+    for var_idx in bmp.order
+        print(f, "$var_idx ")
+    end
+    println(f)
+    dims = BMP_dims(bmp)
+    for chi in dims
+        print(f, "$chi ")
+    end
+    println(f)
+    nR = length(bmp.R)
+    println(f, "$nR")
+    nL = BMP_dims(bmp, 1)
+    for i=1:nL
+        print(f, "1 ")
+    end
+    println(f, "")
+    for val in bmp.R
+        print(f, "$val ")
+    end
+    println(f, "")
+    for i=1:n, j=1:2 # Note the order of the loops
+        for val in bmp.M[i,j].rows
+            print(f, "$val ")
+        end
+        println(f, "")
+    end
+    close(f)
+end
+
+function BMP_load(fpath)
+    f = open(fpath)
+    n = parse(UInt32, readline(f))
+    order = parse.(UInt32, split(readline(f)))
+    dims = parse.(UInt32, split(readline(f)))
+    nR = parse(UInt32, readline(f))
+    L = parse.(RSMInt, split(readline(f)))
+    R = parse.(RSMInt, split(readline(f)))
+    M = Matrix{RowSwitchMatrix}(undef, (n,2))
+    for i=1:n, j=1:2
+        ncols = nR
+        if i < n
+            ncols = dims[i+1]
+        end
+        rows = parse.(RSMInt, split(readline(f)))
+        M[i,j] = RowSwitchMatrix(rows, ncols)
+    end
+    return BMP(M, R, order)
+end
