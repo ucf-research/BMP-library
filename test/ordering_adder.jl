@@ -47,7 +47,8 @@ function build_adder(n::Integer)
         c_ = BMP_minapply([xi, yi, c], f_carry)
         c = c_
     end
-    return BMP_join([outputs; c])
+    # return BMP_join([outputs; c])
+    return BMP_join(outputs)
 end
 
 function eval_adder(n, x, y, adder)
