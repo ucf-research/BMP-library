@@ -2,35 +2,38 @@ include("../src/Conversions.jl")
 
 let
     bdd = BDD([
-        (1, 2, 3),
-        (2, 4, 5),
-        (2, 5, 6),
-        (4, 0, 0),
-        (3, 8, 7),
-        (3, 8, 9),
-        (4, 0, 1),
-        (4, 0, 0),
-        (4, 0, 1)
+        BDDNode(1, 2, 3),
+        BDDNode(2, 4, 5),
+        BDDNode(2, 5, 6),
+        BDDNode(4, 0, 0),
+        BDDNode(3, 8, 7),
+        BDDNode(3, 8, 9),
+        BDDNode(4, 0, 1),
+        BDDNode(4, 0, 0),
+        BDDNode(4, 0, 1)
     ], [1], [1,2,3])
-    for (i, nd) in enumerate(bdd.nodes)
-        nn = Tuple{Int64, Int64, Int64}(nd)
-        println("\t$i\t$nn")
+    for (i, nd) in pairs(bdd.nodes)
+        tp = (nd.var_idx, nd.lchild, nd.hchild)
+        println("\t$i\t$tp\t$(bdd.ref_count[i])")
     end
+    println()
     bmp = BMP(bdd)
     println("Corresponding BMP size: ", BMP_volume(bmp))
     println()
-    newbdd = BDD_reduce(bdd)
-    for (i, nd) in enumerate(newbdd.nodes)
-        nn = Tuple{Int64, Int64, Int64}(nd)
-        println("\t$i\t$nn")
+    newbdd = BDD(copy(bdd.nodes), copy(bdd.outputs), copy(bdd.order))
+    BDD_reduce!(newbdd)
+    for (i, nd) in pairs(newbdd.nodes)
+        tp = (nd.var_idx, nd.lchild, nd.hchild)
+        println("\t$i\t$tp\t$(newbdd.ref_count[i])")
     end
+    println()
     newbmp = BMP(newbdd)
     println("Corresponding BMP size: ", BMP_volume(newbmp))
     println()
     bdd_ = BDD(newbmp)
-    for (i, nd) in enumerate(bdd_.nodes)
-        nn = Tuple{Int64, Int64, Int64}(nd)
-        println("\t$i\t$nn")
+    for (i, nd) in pairs(bdd_.nodes)
+        tp = (nd.var_idx, nd.lchild, nd.hchild)
+        println("\t$i\t$tp\t$(bdd_.ref_count[i])")
     end
     println()
     #
