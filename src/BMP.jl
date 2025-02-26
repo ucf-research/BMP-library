@@ -460,27 +460,62 @@ end
 # SWAP functions
 function BMP_swap!(bmp::BareBMP, i::Integer)
     mats = bmp[i:i+1,:]
+    chi = length(mats[1,1].rows)
     # Unique elements
     U = Dict{Tuple{RSMInt,RSMInt}, RSMInt}()
-    for pair in zip(mats[1,1].rows, mats[1,2].rows)
-        i1, i2 = pair
-        for j=1:2
-            get!(U, (mats[2,j].rows[i1], mats[2,j].rows[i2]), length(U)+1)
+    sizehint!(U, 2 * chi)
+    Ls = [Vector{RSMInt}(undef, chi), Vector{RSMInt}(undef, chi)]
+    for j=1:2
+        m2 = mats[2,j].rows
+        for i in 1:chi
+            i1 = mats[1,1].rows[i]
+            i2 = mats[1,2].rows[i]
+            k = (m2[i1], m2[i2])
+            dv = RSMInt(length(U) + 1)
+            Ls[j][i] = get!(U, k, dv)
         end
     end
     # Left matrices
-    L0 = [get(U, (mats[2,1].rows[i1], mats[2,1].rows[i2]), 0)
-        for (i1,i2) in zip(mats[1,1].rows, mats[1,2].rows)]
-    bmp[i,1] = RowSwitchMatrix(L0, length(U))
-    L1 = [get(U, (mats[2,2].rows[i1], mats[2,2].rows[i2]), 0)
-        for (i1,i2) in zip(mats[1,1].rows, mats[1,2].rows)]
-    bmp[i,2] = RowSwitchMatrix(L1, length(U))
+    bmp[i,1] = RowSwitchMatrix(Ls[1], length(U))
+    bmp[i,2] = RowSwitchMatrix(Ls[2], length(U))
     # Right matrices
     R0 = fill(RSMInt(0), length(U))
     R1 = fill(RSMInt(1), length(U))
     for (k,v) in pairs(U)
         R0[v] = k[1]
         R1[v] = k[2]
+    end
+    bmp[i+1,1] = RowSwitchMatrix(R0, mats[2,1].ncols)
+    bmp[i+1,2] = RowSwitchMatrix(R1, mats[2,2].ncols)
+end
+
+function BMP_swap2!(bmp::BareBMP, i::Integer)
+    mats = bmp[i:i+1,:]
+    # Unique elements
+    chi = length(mats[1,1].rows)
+    U = Vector{Tuple{RSMInt, RSMInt}}(undef, 2 * chi)
+    for j=1:2
+        m2 = mats[2,j].rows
+        for i=1:chi
+            i1 = mats[1,1].rows[i]
+            i2 = mats[1,2].rows[i]
+            U[(j-1) * chi + i] = (m2[i1], m2[i2])
+        end
+    end
+    unique!(sort!(U))
+    # Left matrices
+    L0 = [searchsortedfirst(U, (mats[2,1].rows[i1], mats[2,1].rows[i2]))
+        for (i1,i2) in zip(mats[1,1].rows, mats[1,2].rows)]
+    bmp[i,1] = RowSwitchMatrix(L0, length(U))
+    L1 = [searchsortedfirst(U, (mats[2,2].rows[i1], mats[2,2].rows[i2]))
+        for (i1,i2) in zip(mats[1,1].rows, mats[1,2].rows)]
+    bmp[i,2] = RowSwitchMatrix(L1, length(U))
+    # Right matrices
+    R0 = fill(RSMInt(0), length(U))
+    R1 = fill(RSMInt(1), length(U))
+    for i in axes(U,1)
+        R0[i] = U[i][1]
+        R1[i] = U[i][2]
     end
     bmp[i+1,1] = RowSwitchMatrix(R0, mats[2,1].ncols)
     bmp[i+1,2] = RowSwitchMatrix(R1, mats[2,2].ncols)
