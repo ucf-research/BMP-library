@@ -180,7 +180,8 @@ function BMP_clean1_rl(bmp::BareBMP, R::Vector{<:Integer})::BareBMP
     n = size(bmp, 1)
     M = copy(bmp)
     S_ = RowSwitchMatrix(R .+ 1, 2) # Trick to convert R vector to a row switching matrix
-    M[n,:] .= [RSM_mult(M[n,1], S_), RSM_mult(M[n,2], S_)]
+    M[n,1] = RSM_mult(M[n,1], S_)
+    M[n,2] = RSM_mult(M[n,2], S_)
     for i=n-1:-1:1
         new_pair = BMP_clean1_rlstep(M[i:i+1,:])
         M[i:i+1,:] .= new_pair

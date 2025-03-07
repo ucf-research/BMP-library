@@ -44,20 +44,33 @@ function RSM_kron(a::RowSwitchMatrix, b::RowSwitchMatrix)::RowSwitchMatrix
 end
 
 function RSM_kron(mats::Vector{RowSwitchMatrix})::RowSwitchMatrix
-    nrows = prod(length.(m.rows for m in mats))
-    ncols = prod(m.ncols for m in mats)
+    k = length(mats)
+    rcnt = length.(m.rows for m in mats)
+    nrows = prod(rcnt)
+    rind = fill(1, k)
+    ccnt = collect(m.ncols for m in mats)
+    ncols = prod(ccnt)
+    cind = [mats[i].rows[rind[i]] for i=1:k]
+    cstride = fill(1, k)
+    for i=k-1:-1:1
+        cstride[i] = cstride[i+1] * mats[i+1].ncols
+    end
     array = fill(RSMInt(0), nrows)
-    stride = nrows
-    for m in mats
-        array .*= m.ncols
-        mr = length(m.rows)
-        stride = div(stride, mr) # distance between blocks
-        cnt = div(nrows, stride) # number of blocks
-        for i=0:cnt-1
-            array[i*stride+1:i*stride+stride] .+= (m.rows[i % mr + 1] - 1)
+    for i in 1:nrows
+        val = sum((vi-1) * st for (vi, st) in zip(cind, cstride))
+        array[i] = val + 1
+        rind[k] += 1
+        j = k
+        while rind[j] > rcnt[j] && j > 1
+            rind[j] = 1
+            cind[j] = mats[j].rows[1]
+            rind[j-1] += 1
+            j -= 1
+        end
+        if i != nrows
+            cind[j] = mats[j].rows[rind[j]]
         end
     end
-    array .+= 1
     return RowSwitchMatrix(array, ncols)
 end
 
