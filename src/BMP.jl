@@ -106,10 +106,17 @@ function eval(bmp::BareBMP, x::BitArray, R::Vector{<:Integer}, order::Vector{<:I
     x_ = reshape(x, (n, n_samps))
     result = BitArray(undef, (m, n_samps))
     mat = fill(RSMInt(0), m)
+    prod_mats = Vector{Vector{RSMInt}}(undef, n)
     for j=1:n_samps
-        mat .= bmp[1, x_[order[1],j] + 1].rows
+        for i=1:n
+            prod_mats[i] = bmp[i, x_[order[i], j]+1].rows
+        end
+        mat .= prod_mats[1]
         for i=2:n
-            RSM_mult_inplace(mat, bmp[i, x_[order[i], j] + 1])
+            next_mat = prod_mats[i]
+            for k=1:m
+                mat[k] = next_mat[mat[k]]
+            end
         end
         for k=1:m
             result[k,j] = R[mat[k]]
