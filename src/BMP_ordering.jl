@@ -43,7 +43,7 @@ function move_up!(heap::CustomHeap, i::Integer)
     pi = div(i, 2)
     cost_i = heap.costs[i][1]
     while pi > 0
-        if heap.costs[pi][1] > cost_i
+        if heap.costs[pi][1] >= cost_i
             switch_elems!(heap, pi, i)
             i = pi
             pi = div(i, 2)
@@ -240,7 +240,10 @@ function exact_minimize!(bmp::BMP)
             g[newstate] = newcost
             lastvar[newstate] = i
             # Compute the lower bound estimate if necessary
-            if !Base.haskey(h, newstate) && newcost + (n-k-1) < min_vol
+            if newcost + (n-k-1) > min_vol
+                continue
+            end
+            if !Base.haskey(h, newstate)
                 src = bmp.position[i]
                 for ind=src-1:-1:k+1
                     BMP_swap!(bmp, ind)
@@ -249,11 +252,27 @@ function exact_minimize!(bmp::BMP)
                         min_order .= bmp.order
                     end
                 end
+                prev_min = 0
+                if k < n-1
+                    prev_min = BMP_dims(bmp, k+2)
+                end
+                total_min = prev_min
+                for j=k+3:n
+                    next_min = 1
+                    while (next_min * next_min) < prev_min
+                        next_min += 1
+                    end
+                    total_min += next_min
+                    prev_min = next_min
+                end
+                h[newstate] = total_min
+                #=
                 if k < n-1
                     h[newstate] = BMP_dims(bmp, k+2) + (n-k-2)
                 else
                     h[newstate] = 0
                 end
+                =#
             end
             # Add the successor state to the queue if necessary
             lb = h[newstate]
