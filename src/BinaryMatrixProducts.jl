@@ -13,6 +13,9 @@ export apply, minapply, multiapply, layerapply
 export joinfuncs, swap!
 include("BMP.jl")
 
+export generate_bmp
+include("BMP_util.jl")
+
 export BDD, volume, reduce_bdd!, swap!, save_bdd, load_bdd
 include("BDD.jl")
 include("Conversions.jl")
