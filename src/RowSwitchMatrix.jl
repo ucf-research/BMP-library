@@ -18,20 +18,20 @@ function RowSwitchMatrix(n::Integer)
     return RowSwitchMatrix(Vector{RSMInt}(1:n), n)
 end
 
-function RSM_mult(a::RowSwitchMatrix, b::RowSwitchMatrix)::RowSwitchMatrix
+function mult(a::RowSwitchMatrix, b::RowSwitchMatrix)::RowSwitchMatrix
     if length(b.rows) != a.ncols
         throw(DimensionMismatch("Number of columns of a must equal the number of rows of b."))
     end
     return RowSwitchMatrix(b.rows[a.rows], b.ncols)
 end
 
-function RSM_mult_inplace(a::Vector{<:Integer}, b::RowSwitchMatrix)
+function mult_inplace(a::Vector{<:Integer}, b::RowSwitchMatrix)
     for i in eachindex(a)
         a[i] = b.rows[a[i]]
     end
 end
 
-function RSM_kron(a::RowSwitchMatrix, b::RowSwitchMatrix)::RowSwitchMatrix
+function kron(a::RowSwitchMatrix, b::RowSwitchMatrix)::RowSwitchMatrix
     Na = length(a.rows)
     Nb = length(b.rows)
     Ma = a.ncols
@@ -43,7 +43,7 @@ function RSM_kron(a::RowSwitchMatrix, b::RowSwitchMatrix)::RowSwitchMatrix
     )
 end
 
-function RSM_kron(mats::Vector{RowSwitchMatrix})::RowSwitchMatrix
+function kron(mats::Vector{RowSwitchMatrix})::RowSwitchMatrix
     k = length(mats)
     rcnt = length.(m.rows for m in mats)
     nrows = prod(rcnt)
@@ -74,7 +74,7 @@ function RSM_kron(mats::Vector{RowSwitchMatrix})::RowSwitchMatrix
     return RowSwitchMatrix(array, ncols)
 end
 
-function RSM_join(mats::Vector{RowSwitchMatrix})::RowSwitchMatrix
+function dsum(mats::Vector{RowSwitchMatrix})::RowSwitchMatrix
     nrows = sum(length.(m.rows for m in mats))
     ncols = sum(m.ncols for m in mats)
     array = fill(RSMInt(0), nrows)
@@ -90,7 +90,7 @@ function RSM_join(mats::Vector{RowSwitchMatrix})::RowSwitchMatrix
     return RowSwitchMatrix(array, ncols)
 end
 
-function RSM_bitmatrix(a::RowSwitchMatrix)
+function bitmatrix(a::RowSwitchMatrix)
     nr = length(a.rows)
     nc = a.ncols
     result = BitMatrix(undef, (nr, nc))
@@ -100,11 +100,11 @@ function RSM_bitmatrix(a::RowSwitchMatrix)
     return result
 end
 
-function RSM_matrix(a::RowSwitchMatrix)
+function to_matrix(a::RowSwitchMatrix)
     return [Int64(a.rows[i] == j) for i=1:length(a.rows), j=1:a.ncols]
 end
 
-function SU_decomposition(a::RowSwitchMatrix)
+function decompose(a::RowSwitchMatrix)
     u = RowSwitchMatrix(unique!(sort(a.rows)), a.ncols)
     s = RowSwitchMatrix(indexin(a.rows, u.rows), length(u.rows))
     return (s, u)

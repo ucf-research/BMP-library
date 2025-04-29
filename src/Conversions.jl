@@ -1,6 +1,3 @@
-include("BMP.jl")
-include("BDD.jl")
-
 function BMP(bdd::BDD)
     n = length(bdd)
     V = length(bdd.nodes)
@@ -40,7 +37,7 @@ end
 
 function BDD(bmp::BMP)
     n = length(bmp)
-    V = BMP_volume(bmp)
+    V = volume(bmp)
     nodes = Vector{BDDNode}(undef, V)
     for (i,val) in enumerate(bmp.R)
         nodes[i] = BDDNode(n+1, 0, val)

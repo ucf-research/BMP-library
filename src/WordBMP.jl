@@ -1,5 +1,3 @@
-include("../src/BMP.jl")
-
 struct WordBMP
     M::Matrix{RowSwitchMatrix}
     R::Vector{UInt32}
@@ -58,7 +56,7 @@ function consolidate_outputs(
     return (mats, U)
 end
 
-function consolidate_R(U::Vector{<:Vector{<:Integer}}, R::Vector{<:Integer})
+function consolidate_term(U::Vector{<:Vector{<:Integer}}, R::Vector{<:Integer})
     new_R = Vector{RSMInt}(undef, length(U))
     for (i,bs) in enumerate(U)
         val = 0
@@ -90,7 +88,7 @@ function consolidate_inputs(
             for bi=2:k
                 bval = val >> (k - bi) & 1
                 rsm = M[wstart + bi, bval + 1]
-                RSM_mult_inplace(mat, rsm)
+                mult_inplace(mat, rsm)
                 ncols = rsm.ncols
             end
             result[wi, val+1] = RowSwitchMatrix(mat, ncols)
@@ -102,7 +100,7 @@ end
 function WordBMP(bmp::BMP, isize::Integer, osize::Integer)
     mats_, U = consolidate_outputs(bmp.M, osize)
     mats = consolidate_inputs(mats_, isize)
-    R = consolidate_R(U, bmp.R)
+    R = consolidate_term(U, bmp.R)
     n = length(bmp.order)
     order = reshape(copy(bmp.order), (isize, div(n, isize)))
     return WordBMP(mats, R, order, isize, osize)
@@ -145,19 +143,19 @@ end
 function BMP(wbmp::WordBMP)
     n_words = length(wbmp.M[1,1].rows)
     M_ = break_inputs(wbmp.M, wbmp.isize)
-    M = [RSM_join([m for k=1:wbmp.osize]) for m in M_]
+    M = [dsum([m for k=1:wbmp.osize]) for m in M_]
     U, R = break_outputs(wbmp.R, wbmp.osize, n_words)
     M[1,1] = RowSwitchMatrix(M[1,1].rows[U], M[1,1].ncols)
     M[1,2] = RowSwitchMatrix(M[1,2].rows[U], M[1,2].ncols)
-    return BMP_clean1(BMP(M, R, reshape(wbmp.order, size(M,1))))
+    return clean1(BMP(M, R, reshape(wbmp.order, size(M,1))))
 end
 
-function dims(bmp::WordBMP) 
+function bonddims(bmp::WordBMP) 
     return length.(m.rows for m in bmp.M[:,1])
 end
 
 function matrix_volume(bmp::WordBMP)
-    return sum(dims(bmp))
+    return sum(bonddims(bmp))
 end
 
 function scaled_volume(bmp::WordBMP)
@@ -179,7 +177,7 @@ function compute_words(k::Integer, nw::Integer, xs::BitVector, order::Matrix{<:I
     return result
 end
 
-function eval(bmp::WordBMP, x::BitArray)
+function evalfunc(bmp::WordBMP, x::BitArray)
     n_words = size(bmp.M, 1)
     kin = bmp.isize
     kout = bmp.osize
@@ -193,7 +191,7 @@ function eval(bmp::WordBMP, x::BitArray)
         sample_words = compute_words(kin, n_words, x_[:,j], bmp.order)
         mat .= bmp.M[1, sample_words[1] + 1].rows
         for i=2:n_words
-            RSM_mult_inplace(mat, bmp.M[i, sample_words[i] + 1])
+            mult_inplace(mat, bmp.M[i, sample_words[i] + 1])
         end
         for i=1:m_words, bi=1:kout
             result[(i-1)*kout + bi, j] = bmp.R[mat[i]] >> (kout - bi) & 1
@@ -237,13 +235,13 @@ function word_clean1_rlstep(mats::Matrix{RowSwitchMatrix})
     return result
 end
 
-function clean1_rl(mats::Matrix{RowSwitchMatrix}, R::Vector{<:Integer})
+function word_clean1_rl(mats::Matrix{RowSwitchMatrix}, R::Vector{<:Integer})
     n = size(mats, 1)
     K = size(mats, 2)
     M = copy(mats)
     S_ = RowSwitchMatrix(R .+ 1, K) # Trick to convert R vector to a row switching matrix
     for j=1:K
-        M[n,j] = RSM_mult(M[n,j], S_)
+        M[n,j] = mult(M[n,j], S_)
     end
     for i=n-1:-1:1
         new_pair = word_clean1_rlstep(M[i:i+1,:])
@@ -258,7 +256,7 @@ function clean1_rl(bmp::WordBMP)
     M = copy(bmp.M)
     S_ = RowSwitchMatrix(bmp.R .+ 1, K) # Trick to convert R vector to a row switching matrix
     for j=1:K
-        M[n,j] = RSM_mult(M[n,j], S_)
+        M[n,j] = mult(M[n,j], S_)
     end
     for i=n-1:-1:1
         new_pair = word_clean1_rlstep(M[i:i+1,:])
@@ -294,7 +292,7 @@ function word_clean1_lrstep(mats::Matrix{RowSwitchMatrix})
     return result
 end
 
-function clean1_lr(mats::Matrix{RowSwitchMatrix})
+function word_clean1_lr(mats::Matrix{RowSwitchMatrix})
     n = size(mats, 1)
     M = copy(mats)
     for i=1:n-1
@@ -314,7 +312,7 @@ function clean1_lr(bmp::WordBMP)
     return WordBMP(M, copy(bmp.R), copy(bmp.order), bmp.isize, bmp.osize)
 end
 
-function clean1(mats::Matrix{RowSwitchMatrix}, R::Vector{<:Integer})
+function word_clean1(mats::Matrix{RowSwitchMatrix}, R::Vector{<:Integer})
     n = size(mats, 1)
     K = size(mats, 2)
     M = copy(mats)
@@ -326,7 +324,7 @@ function clean1(mats::Matrix{RowSwitchMatrix}, R::Vector{<:Integer})
     # Right-to-left sweep: eliminate duplicate equivalent rows
     S_ = RowSwitchMatrix(R .+ 1, K) # Trick to convert R vector to a row switching matrix
     for j=1:K
-        M[n,j] = RSM_mult(M[n,j], S_)
+        M[n,j] = mult(M[n,j], S_)
     end
     for i=n-1:-1:1
         new_pair = word_clean1_rlstep(M[i:i+1,:])
@@ -347,7 +345,7 @@ function clean1(bmp::WordBMP)
     # Right-to-left sweep: eliminate duplicate equivalent rows
     S_ = RowSwitchMatrix(bmp.R .+ 1, K) # Trick to convert R vector to a row switching matrix
     for j=1:K
-        M[n,j] = RSM_mult(M[n,j], S_)
+        M[n,j] = mult(M[n,j], S_)
     end
     for i=n-1:-1:1
         new_pair = word_clean1_rlstep(M[i:i+1,:])
@@ -356,7 +354,7 @@ function clean1(bmp::WordBMP)
     return WordBMP(M, collect(0:K-1), copy(bmp.order), bmp.isize, bmp.osize)
 end
 
-function word_join(bmps)
+function joinfuncs(bmps::Vector{<:WordBMP})
     n = size(bmps[1].M, 1)
     K = size(bmps[1].M, 2)
     M = Matrix{RowSwitchMatrix}(undef, (n, K))
@@ -365,7 +363,7 @@ function word_join(bmps)
         for (mi, bmp) in enumerate(bmps)
             join_mats[mi] = bmp.M[i, j]
         end
-        M[i,j] = RSM_join(join_mats)
+        M[i,j] = dsum(join_mats)
     end
     nR = sum(length.(bmp.R for bmp in bmps))
     R = fill(UInt32(0), nR)
@@ -375,8 +373,8 @@ function word_join(bmps)
         R[offset+1:offset+sz] .= bmp.R
         offset += sz
     end
-    M1 = clean1_lr(M)
-    M2 = clean1_rl(M1, R)
+    M1 = word_clean1_lr(M)
+    M2 = word_clean1_rl(M1, R)
     return WordBMP(M2, collect(0:K-1), copy(bmps[1].order), bmps[1].isize, bmps[1].osize)
 end
 
@@ -385,7 +383,7 @@ function canonize_terminal!(bmp::WordBMP)
     K = size(bmp.M, 2)
     S = RowSwitchMatrix(bmp.R .+ 1, K) # Trick to convert R vector to a row switching matrix
     for j=1:K
-        bmp.M[n,j] = RSM_mult(bmp.M[n,j], S)
+        bmp.M[n,j] = mult(bmp.M[n,j], S)
     end
     resize!(bmp.R, K)
     for j=1:K

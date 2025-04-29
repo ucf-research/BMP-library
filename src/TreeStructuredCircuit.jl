@@ -1,6 +1,3 @@
-include("../src/BMP.jl")
-include("../src/Circuit.jl")
-
 function effective_order(q::Integer, layers::Vector{<:Integer}, k::Integer=3)
     result = fill(0, k^q)
     terms = k .^(layers .- 1)

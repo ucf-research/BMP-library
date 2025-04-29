@@ -66,11 +66,11 @@ function Base.length(bdd::BDD)
     return length(bdd.order)
 end
 
-function BDD_volume(bdd::BDD)
+function volume(bdd::BDD)
     return sum(cnt > 0 ? 1 : 0 for cnt in bdd.ref_count)
 end
 
-function BDD_gc!(bdd::BDD, var_idx::Integer)
+function gc_bdd!(bdd::BDD, var_idx::Integer)
     nodes = collect(bdd.levels[var_idx])
     for node_ref in nodes
         cnt = bdd.ref_count[node_ref]
@@ -84,13 +84,13 @@ function BDD_gc!(bdd::BDD, var_idx::Integer)
     end
 end
 
-function BDD_gc!(bdd::BDD)
+function gc_bdd!(bdd::BDD)
     for var_idx in axes(bdd.order,1)
-        BDD_gc!(bdd, var_idx)
+        gc_bdd!(bdd, var_idx)
     end
 end
 
-function BDD_reduce!(bdd::BDD)
+function reduce_bdd!(bdd::BDD)
     n = length(bdd)
     ids = Dict(i => i for i in keys(bdd.nodes))
     id_map = Dict{BDDNode, BDDSize}()
@@ -131,10 +131,10 @@ function BDD_reduce!(bdd::BDD)
             bdd.ref_count[node.hchild] += 1
         end
     end
-    BDD_gc!(bdd)
+    gc_bdd!(bdd)
 end
 
-function eval(bdd::BDD, x::BitArray)
+function evalfunc(bdd::BDD, x::BitArray)
     n = length(bdd)
     m = length(bdd.outputs)
     n_samps = div(length(x), size(x, 1))
@@ -155,7 +155,7 @@ function eval(bdd::BDD, x::BitArray)
     return reshape(result, Tuple(shape))
 end
 
-function BDD_create_node!(bdd::BDD)
+function create_node!(bdd::BDD)
     if length(bdd.gc_refs) > 0
         node_ref = first(bdd.gc_refs)
         delete!(bdd.gc_refs, node_ref)
@@ -166,9 +166,9 @@ function BDD_create_node!(bdd::BDD)
     return length(bdd.nodes)
 end
 
-function BDD_create_node!(bdd::BDD, node::BDDNode)
+function create_node!(bdd::BDD, node::BDDNode)
     n = length(bdd)
-    node_ref = BDD_create_node!(bdd)
+    node_ref = create_node!(bdd)
     bdd.nodes[node_ref] = node
     if node.var_idx != n+1
         bdd.ref_count[node.lchild] += 1
@@ -178,7 +178,7 @@ function BDD_create_node!(bdd::BDD, node::BDDNode)
     return node_ref
 end
 
-function BDD_move_node!(bdd::BDD, node_ref::BDDSize, new_node::BDDNode)
+function move_node!(bdd::BDD, node_ref::BDDSize, new_node::BDDNode)
     n = length(bdd)
     # Remove old version
     node = bdd.nodes[node_ref]
@@ -196,7 +196,7 @@ function BDD_move_node!(bdd::BDD, node_ref::BDDSize, new_node::BDDNode)
     push!(bdd.levels[new_node.var_idx], node_ref)
 end
 
-function BDD_swap!(bdd::BDD, i::Integer)
+function swap!(bdd::BDD, i::Integer)
     x1 = bdd.order[i]
     x2 = bdd.order[i+1]
     nodes1 = collect(bdd.levels[x1])
@@ -221,7 +221,7 @@ function BDD_swap!(bdd::BDD, i::Integer)
         if new_lc.lchild != new_lc.hchild
             new_lc_ref = get(id_map, new_lc, 0)
             if new_lc_ref == 0
-                new_lc_ref = BDD_create_node!(bdd, new_lc)
+                new_lc_ref = create_node!(bdd, new_lc)
                 id_map[new_lc] = new_lc_ref
             end
         end
@@ -229,20 +229,20 @@ function BDD_swap!(bdd::BDD, i::Integer)
         if new_hc.lchild != new_hc.hchild
             new_hc_ref = get(id_map, new_hc, 0)
             if new_hc_ref == 0
-                new_hc_ref = BDD_create_node!(bdd, new_hc)
+                new_hc_ref = create_node!(bdd, new_hc)
                 id_map[new_hc] = new_hc_ref
             end
         end
-        BDD_move_node!(bdd, node_ref, BDDNode(x2, new_lc_ref, new_hc_ref))
+        move_node!(bdd, node_ref, BDDNode(x2, new_lc_ref, new_hc_ref))
     end
     bdd.order[i] = x2
     bdd.position[x2] = i
     bdd.order[i+1] = x1
     bdd.position[x1] = i+1
-    BDD_gc!(bdd, x2)
+    gc_bdd!(bdd, x2)
 end
 
-function BDD_save(fpath::String, bdd::BDD)
+function save_bdd(fpath::String, bdd::BDD)
     f = open(fpath, "w")
     n = length(bdd.order)
     n_out = length(bdd.outputs)
@@ -262,7 +262,7 @@ function BDD_save(fpath::String, bdd::BDD)
     close(f)
 end
 
-function BDD_load(fpath::String)
+function load_bdd(fpath::String)
     f = open(fpath)
     n, n_out, n_nodes = parse.(BDDSize, split(readline(f)))
     order = parse.(BDDVar, split(readline(f)))

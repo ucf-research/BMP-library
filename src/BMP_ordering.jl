@@ -1,5 +1,3 @@
-include("../src/BMP.jl")
-
 # A heap based priority queue used for exact minimization
 struct CustomHeap
     costs::Vector{Tuple{UInt64, BitVector}}
@@ -53,12 +51,12 @@ function move_up!(heap::CustomHeap, i::Integer)
     end
 end
 
-function haskey(heap::CustomHeap, state::BitVector)
-    return Base.haskey(heap.states, state)
+function Base.haskey(heap::CustomHeap, state::BitVector)
+    return haskey(heap.states, state)
 end
 
 function update!(heap::CustomHeap, state::BitVector, cost::Integer)
-    if Base.haskey(heap.states, state)
+    if haskey(heap.states, state)
         ind = heap.states[state]
         pcost, state_ = heap.costs[ind]
         heap.costs[ind] = (cost, state_)
@@ -75,13 +73,13 @@ function update!(heap::CustomHeap, state::BitVector, cost::Integer)
     end
 end
 
-function pop!(heap::CustomHeap)
+function Base.pop!(heap::CustomHeap)
     if length(heap.costs) == 0
         throw(ArgumentError("Heap must be non-empty."))
     end
     c, s = heap.costs[1]
     delete!(heap.states, s)
-    head = Base.pop!(heap.costs)
+    head = pop!(heap.costs)
     if length(heap.costs) > 0
         heap.costs[1] = head
         heap.states[head[2]] = 1
@@ -95,7 +93,7 @@ function partial_order!(bmp::BMP, pord::Vector{<:Integer})
     for (dest, var) in enumerate(pord)
         src = bmp.position[var]
         for i=src-1:-1:dest
-            BMP_swap!(bmp, i)
+            swap!(bmp, i)
         end
     end
 end
@@ -109,8 +107,8 @@ function reconstruct_ordering!(
     for (dest, var) in enumerate(pord)
         src = bmp.position[var]
         for i=src-1:-1:dest
-            BMP_swap!(bmp, i)
-            vol = BMP_volume(bmp)
+            swap!(bmp, i)
+            vol = volume(bmp)
             if vol < min_vol
                 min_vol = vol
                 min_order .= bmp.order
@@ -163,21 +161,21 @@ function basic_exact_minimize!(bmp::BMP)
             end
             newstate = copy(state)
             newstate[i] = true
-            newcost = g[state] + BMP_dims(bmp, k+1)
-            if Base.haskey(g, newstate)
+            newcost = g[state] + bonddims(bmp, k+1)
+            if haskey(g, newstate)
                 if newcost >= g[newstate]
                     continue
                 end
             end
             g[newstate] = newcost
             prev[newstate] = i
-            if !Base.haskey(h, newstate)
+            if !haskey(h, newstate)
                 src = bmp.position[i]
                 for ind=src-1:-1:k+1
-                    BMP_swap!(bmp, ind)
+                    swap!(bmp, ind)
                 end
                 if k < n-1
-                    h[newstate] = BMP_dims(bmp, k+2) + (n-k-2)
+                    h[newstate] = bonddims(bmp, k+2) + (n-k-2)
                 else
                     h[newstate] = 0
                 end
@@ -195,7 +193,7 @@ function exact_minimize!(bmp::BMP)
     h = Dict{BitVector, UInt64}()
     lastvar = Dict{BitVector, UInt64}()
     # The upper bound
-    min_vol = BMP_volume(bmp)
+    min_vol = volume(bmp)
     min_order = copy(bmp.order)
     # The priority queue
     pq = CustomHeap()
@@ -230,8 +228,8 @@ function exact_minimize!(bmp::BMP)
             end
             newstate = copy(state)
             newstate[i] = true
-            newcost = g[state] + BMP_dims(bmp, k+1)
-            if Base.haskey(g, newstate)
+            newcost = g[state] + bonddims(bmp, k+1)
+            if haskey(g, newstate)
                 if newcost >= g[newstate]
                     # Shorter path already known, skip this state
                     continue
@@ -243,18 +241,18 @@ function exact_minimize!(bmp::BMP)
             if newcost + (n-k-1) > min_vol
                 continue
             end
-            if !Base.haskey(h, newstate)
+            if !haskey(h, newstate)
                 src = bmp.position[i]
                 for ind=src-1:-1:k+1
-                    BMP_swap!(bmp, ind)
-                    vol = BMP_volume(bmp)
+                    swap!(bmp, ind)
+                    vol = volume(bmp)
                     if vol < min_vol
                         min_order .= bmp.order
                     end
                 end
                 prev_min = 0
                 if k < n-1
-                    prev_min = BMP_dims(bmp, k+2)
+                    prev_min = bonddims(bmp, k+2)
                 end
                 total_min = prev_min
                 for j=k+3:n
@@ -268,7 +266,7 @@ function exact_minimize!(bmp::BMP)
                 h[newstate] = total_min
                 #=
                 if k < n-1
-                    h[newstate] = BMP_dims(bmp, k+2) + (n-k-2)
+                    h[newstate] = bonddims(bmp, k+2) + (n-k-2)
                 else
                     h[newstate] = 0
                 end
@@ -289,18 +287,18 @@ function sift!(bmp::BMP, n_iters::Integer=1)
     for iter=1:n_iters
         for var_i=1:n
             pos = bmp.position[var_i]
-            min_vol = BMP_volume(bmp)
+            min_vol = volume(bmp)
             min_pos = pos
             for i=Iterators.flatten((pos-1:-1:1, 1:n-1))
-                BMP_swap!(bmp, i)
-                vol = BMP_volume(bmp)
+                swap!(bmp, i)
+                vol = volume(bmp)
                 if vol < min_vol
                     min_vol = vol
                     min_pos = bmp.position[var_i]
                 end
             end
             for i=n-1:-1:min_pos
-                BMP_swap!(bmp, i)
+                swap!(bmp, i)
             end
         end
     end
@@ -312,7 +310,7 @@ function log_sift!(bmp::BMP, n_iters::Integer=1)
         println("Iteration: ", iter)
         for var_i=1:n
             pos = bmp.position[var_i]
-            min_vol = BMP_volume(bmp)
+            min_vol = volume(bmp)
             min_pos = pos
             println(
                 "  Variable: ",
@@ -325,8 +323,8 @@ function log_sift!(bmp::BMP, n_iters::Integer=1)
                 Vector{Int64}(bmp.order)
             )
             for i=Iterators.flatten((pos-1:-1:1, 1:n-1))
-                BMP_swap!(bmp, i)
-                vol = BMP_volume(bmp)
+                swap!(bmp, i)
+                vol = volume(bmp)
                 println(
                     "    Current position: ",
                     bmp.position[var_i],
@@ -342,8 +340,8 @@ function log_sift!(bmp::BMP, n_iters::Integer=1)
             end
             println("  Minimum position: ", min_pos, ", minimum volume: ", min_vol)
             for i=n-1:-1:min_pos
-                BMP_swap!(bmp, i)
-                vol = BMP_volume(bmp)
+                swap!(bmp, i)
+                vol = volume(bmp)
                 println(
                     "    Current position: ",
                     bmp.position[var_i],

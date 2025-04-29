@@ -18,7 +18,7 @@ struct Circuit
     end
 end
 
-function eval(circuit::Circuit, input::BitArray)
+function evalfunc(circuit::Circuit, input::BitArray)
     n = size(input, 1)
     if n != circuit.n
         throw(DimensionMismatch("The circuit input length and the number of circuit registers don't match."))
