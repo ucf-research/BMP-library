@@ -1,3 +1,53 @@
+function insert_var(bmp::BMP, p::Integer)
+    n = length(bmp)
+    M = Matrix{RowSwitchMatrix}(undef, (n+1,2))
+    d = length(bmp.R)
+    if p < n+1
+        d = length(bmp.M[p,1].rows)
+    end
+    M[1:p-1,:] .= bmp.M[1:p-1,:]
+    M[p+1:n+1,:] .= bmp.M[p:n,:]
+    M[p,1] = RowSwitchMatrix(d)
+    M[p,2] = RowSwitchMatrix(d)
+    order = copy(bmp.order)
+    insert!(order, p, n+1)
+    return BMP(M, copy(bmp.R), order)
+end
+
+function insert_var(bmp::BMP)
+    n = length(bmp)
+    return insert_var(bmp, n+1)
+end
+
+function restrict(bmp::BMP, var::Integer, val::Integer)
+    M = copy(bmp.M)
+    p = bmp.position[var]
+    mat = M[p,val+1]
+    M[p,2-val] = RowSwitchMatrix(copy(mat.rows), mat.ncols)
+    return BMP(clean1(M, bmp.R), [0,1], copy(bmp.order))
+end
+
+function erase_var(bmp::BMP, var::Integer, val::Integer)
+    n = length(bmp)
+    p = bmp.position[var]
+    M = vcat(bmp.M[1:p-1,:], bmp.M[p+1:n,:])
+    mat = bmp.M[p,val+1]
+    if p == n
+        M[n-1,1] = mult(bmp.M[n-1,1], mat)
+        M[n-1,2] = mult(bmp.M[n-1,2], mat)
+    else
+        M[p,1] = mult(mat, bmp.M[p+1,1])
+        M[p,2] = mult(mat, bmp.M[p+1,2])
+    end
+    order = vcat(bmp.order[1:p-1], bmp.order[p+1:n])
+    for (i,vl) in enumerate(order)
+        if vl > var
+            order[i] -= 1
+        end
+    end
+    return BMP(clean1(M, bmp.R), [0,1], order)
+end
+
 function swap!(bmp::BareBMP, i::Integer)
     mats = bmp[i:i+1,:]
     chi = length(mats[1,1].rows)
