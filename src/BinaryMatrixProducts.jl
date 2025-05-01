@@ -8,10 +8,16 @@ include("Circuit.jl")
 
 export BMP, projbmp, bonddims, volume
 export evalfunc
-export clean1_rl, clean1_lr, clean1
-export apply, minapply, multiapply, layerapply
-export joinfuncs, swap!
+export save_bmp, load_bmp
 include("BMP.jl")
+export clean1_rl, clean1_lr, clean1
+include("BMP_clean.jl")
+export apply, minapply, multiapply, layerapply
+include("BMP_apply.jl")
+include("BMP_minapply.jl")
+include("BMP_multiapply.jl")
+export joinfuncs, swap!
+include("BMP_ops.jl")
 
 export generate_bmp
 include("BMP_util.jl")
