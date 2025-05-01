@@ -16,7 +16,10 @@ export apply, minapply, multiapply, layerapply
 include("BMP_apply.jl")
 include("BMP_minapply.jl")
 include("BMP_multiapply.jl")
-export insert_var, restrict, erase_var, compose, joinfuncs, swap!
+export insert_var, restrict, erase_var
+export compose
+export joinfuncs
+export swap!, reorder!
 include("BMP_ops.jl")
 
 export generate_bmp

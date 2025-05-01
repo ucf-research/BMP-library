@@ -33,5 +33,13 @@ using Random
         tests4 = vcat(tests0[1:vi-1,:], tests0[vi+1:n,:])
         @test all(evalfunc(bmp0, tests0_) .== evalfunc(bmp4, tests4))
     end
+    #
+    n_shuffles = 10
+    tests_out = evalfunc(bmp0, tests0)
+    for _ in 1:n_shuffles
+        order = randperm(n)
+        reorder!(bmp0, order)
+        @test all(evalfunc(bmp0, tests0) .== tests_out)
+    end
 end
 

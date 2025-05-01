@@ -94,6 +94,15 @@ function swap!(bmp::BMP, i::Integer)
     bmp.position[bmp.order[i+1]] = i+1
 end
 
+function reorder!(bmp, pord::Vector{<:Integer})
+    for (dest, var) in enumerate(pord)
+        src = bmp.position[var]
+        for i=src-1:-1:dest
+            swap!(bmp, i)
+        end
+    end
+end
+
 function joinfuncs(bmps::Vector{BMP})
     n = size(bmps[1].M, 1)
     mats = Matrix{RowSwitchMatrix}(undef, (n, 2))
@@ -108,4 +117,3 @@ function joinfuncs(bmps::Vector{BMP})
     end
     return clean1(BMP(mats, R, copy(bmps[1].order)))
 end
-
