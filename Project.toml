@@ -1,6 +1,6 @@
 name = "BinaryMatrixProducts"
 uuid = "3ed30847-0fc3-408f-a0dc-ec55633f3837"
-authors = ["erenust <erenust@gmail.com>"]
+authors = ["erenust <erenust@gmail.com>", "eduardo-mucciolo <e.mucciolo@gmail.com>"]
 version = "0.1.0"
 license = "Apache 2.0"
 
