@@ -29,3 +29,5 @@ In order to run these files you need to use the environment you created:
 ```
 $ julia --project=/path/to/your-project foo.jl
 ```
+
+This work is based on research supported by the National Science Foundation under grants OIA-2428487 and OIA-2428488.
