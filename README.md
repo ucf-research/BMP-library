@@ -3,11 +3,7 @@ BMPs are compact tensor-network representations of Boolean functions. They
 are closely related to ordered binary decision diagrams (OBDD). This repository
 provides an implementation of basic BMP functionality and is written in Julia.
 
-In order to use the code here, you must first clone the repository:
-```
-$ git clone https://github.com/ucf-research/BMP-library.git
-```
-Once you have a local copy of the package, create your own Julia environment to
+In order to use the code here, you should first create your own Julia environment to
 work with:
 ```
 $ mkdir your-project
@@ -16,9 +12,9 @@ $ julia
 julia> ]
 pkg> activate .
 ```
-In the same interface, add the local copy of the package to your environment:
+In the same interface, add the package on this repository to your environment:
 ```
-pkg> add /path/to/BMP-library
+pkg> add https://github.com/ucf-research/BMP-library.git
 ```
 Now you can import the BMP functions by adding the following line to your Julia
 files:
