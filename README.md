@@ -1,7 +1,7 @@
 # BMP: Binary Matrix Products
-BMPs are compact representations of boolean functions as tensor networks. They
+BMPs are compact tensor-network representations of Boolean functions. They
 are closely related to ordered binary decision diagrams (OBDD). This repository
-provides an implementation of basic BMP functionality written in Julia.
+provides an implementation of basic BMP functionality and is written in Julia.
 
 In order to use the code here, you must first clone the repository:
 ```
