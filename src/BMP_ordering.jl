@@ -256,7 +256,7 @@ function exact_minimize!(bmp::BMP)
     while !found
         cost, state = pop!(pq)
         # Abort if the lower bound exceeds the upper bound
-        if cost >= min_vol
+        if cost + 2 >= min_vol
             found = true
             partial_order!(bmp, min_order)
             break
@@ -287,7 +287,7 @@ function exact_minimize!(bmp::BMP)
             g[newstate] = newcost
             lastvar[newstate] = i
             # Compute the lower bound estimate if necessary
-            if newcost + compute_heuristic(bonddims(bmp, k+1), n-k-1) > min_vol
+            if newcost + compute_heuristic(bonddims(bmp, k+1), n-k-1) + 2 > min_vol
                 continue
             end
             if !haskey(h, newstate)
@@ -308,7 +308,7 @@ function exact_minimize!(bmp::BMP)
             end
             # Add the successor state to the queue if necessary
             lb = h[newstate]
-            if newcost + lb < min_vol
+            if newcost + lb + 2 <= min_vol
                 update!(pq, newstate, newcost + lb)
             end
         end
@@ -333,57 +333,6 @@ function sift!(bmp::BMP, n_iters::Integer=1)
             end
             for i=n-1:-1:min_pos
                 swap!(bmp, i)
-            end
-        end
-    end
-end
-
-function log_sift!(bmp::BMP, n_iters::Integer=1)
-    n = length(bmp)
-    for iter=1:n_iters
-        println("Iteration: ", iter)
-        for var_i=1:n
-            pos = bmp.position[var_i]
-            min_vol = volume(bmp)
-            min_pos = pos
-            println(
-                "  Variable: ",
-                var_i,
-                ", initial position: ",
-                pos,
-                ", initial volume: ",
-                min_vol,
-                ", initial order: ",
-                Vector{Int64}(bmp.order)
-            )
-            for i=Iterators.flatten((pos-1:-1:1, 1:n-1))
-                swap!(bmp, i)
-                vol = volume(bmp)
-                println(
-                    "    Current position: ",
-                    bmp.position[var_i],
-                    ", current volume: ",
-                    vol,
-                    ", current order: ",
-                    Vector{Int64}(bmp.order)
-                )
-                if vol < min_vol
-                    min_vol = vol
-                    min_pos = bmp.position[var_i]
-                end
-            end
-            println("  Minimum position: ", min_pos, ", minimum volume: ", min_vol)
-            for i=n-1:-1:min_pos
-                swap!(bmp, i)
-                vol = volume(bmp)
-                println(
-                    "    Current position: ",
-                    bmp.position[var_i],
-                    ", current volume: ",
-                    vol,
-                    ", current order: ",
-                    Vector{Int64}(bmp.order)
-                )
             end
         end
     end

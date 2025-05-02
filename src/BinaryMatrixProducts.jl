@@ -34,6 +34,7 @@ include("Chip.jl")
 
 export brute_force!, exact_minimize!, sift!
 include("BMP_ordering.jl")
+include("BMP_ordering_debug.jl")
 
 export WordBMP
 include("WordBMP.jl")
