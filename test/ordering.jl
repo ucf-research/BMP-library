@@ -1,5 +1,6 @@
 using BinaryMatrixProducts
 using BinaryMatrixProducts: get_swap_position
+using BinaryMatrixProducts: basic_exact_minimize!
 using Test
 using Random
 
@@ -25,11 +26,14 @@ end
         init_vol = volume(f1)
         f2 = BMP(copy(f1.M), copy(f1.R), copy(f1.order))
         f3 = BMP(copy(f1.M), copy(f1.R), copy(f1.order))
+        f4 = BMP(copy(f1.M), copy(f1.R), copy(f1.order))
         brute_force!(f1)
         exact_minimize!(f2)
-        sift!(f3)
+        basic_exact_minimize!(f3)
+        sift!(f4)
         @test volume(f1) == volume(f2)
+        @test volume(f1) == volume(f3)
         @test volume(f1) <= init_vol
-        @test volume(f3) <= init_vol
+        @test volume(f4) <= init_vol
     end
 end

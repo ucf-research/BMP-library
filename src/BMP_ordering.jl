@@ -165,6 +165,17 @@ function trace_path(state::BitVector, prev::Dict{BitVector, UInt64})
 end
 
 function compute_heuristic(bdim::Integer, nr::Integer)
+    total = 0
+    prev_bond = bdim
+    for _ in 1:nr
+        d = 1
+        while d * d < prev_bond
+            d += 1
+        end
+        total += d
+        prev_bond = d
+    end
+    return total
 end
 
 # A* based exact minimization algorithm
@@ -212,7 +223,8 @@ function basic_exact_minimize!(bmp::BMP)
                     swap!(bmp, ind)
                 end
                 if k < n-1
-                    h[newstate] = bonddims(bmp, k+2) + (n-k-2)
+                    bdim = bonddims(bmp, k+2)
+                    h[newstate] = bdim + compute_heuristic(bdim, n-k-2)
                 else
                     h[newstate] = 0
                 end
@@ -275,7 +287,7 @@ function exact_minimize!(bmp::BMP)
             g[newstate] = newcost
             lastvar[newstate] = i
             # Compute the lower bound estimate if necessary
-            if newcost + (n-k-1) > min_vol
+            if newcost + compute_heuristic(bonddims(bmp, k+1), n-k-1) > min_vol
                 continue
             end
             if !haskey(h, newstate)
@@ -287,27 +299,12 @@ function exact_minimize!(bmp::BMP)
                         min_order .= bmp.order
                     end
                 end
-                prev_min = 0
                 if k < n-1
-                    prev_min = bonddims(bmp, k+2)
-                end
-                total_min = prev_min
-                for j=k+3:n
-                    next_min = 1
-                    while (next_min * next_min) < prev_min
-                        next_min += 1
-                    end
-                    total_min += next_min
-                    prev_min = next_min
-                end
-                h[newstate] = total_min
-                #=
-                if k < n-1
-                    h[newstate] = bonddims(bmp, k+2) + (n-k-2)
+                    bdim = bonddims(bmp, k+2)
+                    h[newstate] = bdim + compute_heuristic(bdim, n-k-2)
                 else
                     h[newstate] = 0
                 end
-                =#
             end
             # Add the successor state to the queue if necessary
             lb = h[newstate]
