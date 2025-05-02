@@ -32,7 +32,7 @@ include("Conversions.jl")
 export Chip, apply_gate!, minapply_gate!, join_chip
 include("Chip.jl")
 
-export exact_minimize!, sift!
+export brute_force!, exact_minimize!, sift!
 include("BMP_ordering.jl")
 
 export WordBMP

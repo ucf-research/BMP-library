@@ -1,3 +1,37 @@
+function get_swap_position(n::Integer, i::Integer)
+    if n == 2
+        return 1
+    end
+    l = i % n
+    k = div(i, n)
+    if l != 0 && k % 2 == 0
+        return n-l
+    elseif l != 0 && k % 2 == 1
+        return l
+    elseif k % 2 == 1
+        return get_swap_position(n-1, k) + 1
+    else
+        return get_swap_position(n-1, k)
+    end
+end
+
+function brute_force!(bmp::BMP)
+    min_order = copy(bmp.order)
+    min_vol = volume(bmp)
+    n = length(bmp)
+    N = prod(1:n)
+    for i=1:N-1
+        p = get_swap_position(n, i)
+        swap!(bmp, p)
+        vol = volume(bmp)
+        if vol < min_vol
+            min_order .= bmp.order
+            min_vol = vol
+        end
+    end
+    reorder!(bmp, min_order)
+end
+
 # A heap based priority queue used for exact minimization
 struct CustomHeap
     costs::Vector{Tuple{UInt64, BitVector}}
@@ -128,6 +162,9 @@ function trace_path(state::BitVector, prev::Dict{BitVector, UInt64})
         state_[var] = false
     end
     return pord
+end
+
+function compute_heuristic(bdim::Integer, nr::Integer)
 end
 
 # A* based exact minimization algorithm
