@@ -15,6 +15,13 @@ function get_swap_position(n::Integer, i::Integer)
     end
 end
 
+"""
+    brute_force!(bmp::BMP)
+
+Optimizes the variable ordering of `bmp` by brute-force iterating over all
+possible permutations of variables via local swaps. This is a very inefficient
+method that mainly exists to check other optimization methods.
+"""
 function brute_force!(bmp::BMP)
     min_order = copy(bmp.order)
     min_vol = volume(bmp)
@@ -178,7 +185,6 @@ function compute_heuristic(bdim::Integer, nr::Integer)
     return total
 end
 
-# A* based exact minimization algorithm
 function basic_exact_minimize!(bmp::BMP)
     n = length(bmp)
     # Initialization of the maps
@@ -234,7 +240,12 @@ function basic_exact_minimize!(bmp::BMP)
     end
 end
 
-# A* based algorithm augmented by branch-and-bound optimizations
+"""
+    exact_minimize!(bmp::BMP)
+
+Finds the optimal variable ordering for `bmp` using an algorithm based on A*
+and branch-and-bound techniques.
+"""
 function exact_minimize!(bmp::BMP)
     n = length(bmp)
     # Initialization of the maps
@@ -315,7 +326,14 @@ function exact_minimize!(bmp::BMP)
     end
 end
 
-# Sifting algorithm for dynamic variable reordering
+"""
+    sift!(bmp::BMP, n_iters::Integer)
+
+A heuristic variable ordering optimizer that works by finding the optimal
+position for one variable at a time while keeping the relative ordering of the
+others fixed. `n_iters` determines how many times this process is repeated. The
+default value of `n_iters` is `1`.
+"""
 function sift!(bmp::BMP, n_iters::Integer=1)
     n = length(bmp)
     for iter=1:n_iters

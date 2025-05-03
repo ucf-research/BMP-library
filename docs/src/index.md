@@ -1,0 +1,20 @@
+```@docs
+BMP
+BMP(::Integer, ::Integer)
+projbmp
+length(bmp::BMP)
+bonddims
+volume
+evalfunc
+apply
+minapply
+multiapply
+layerapply
+insert_var
+restrict
+erase_var
+joinfuncs
+brute_force!
+exact_minimize!
+sift!
+```

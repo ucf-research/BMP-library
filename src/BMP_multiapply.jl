@@ -21,6 +21,20 @@ function multiapply_noclean(
     return (mats, U)
 end
 
+"""
+    multiapply(chip::BMP, bits::Vector{<:Vector{<:Integer}}, tabs::Vector{<:Vector{<:Integer}})
+
+Uses a modified version of the direct-sum method to generate the joint BMP of
+multiple functions in one sweep over the joint BMP `chip`. Each element of
+`bits` is a vector indicating which of the output bits of `chip` enter into a
+given function. The corresponding entry in `tabs` gives the truth table of that
+function. For example, the call
+```
+multiapply(chip, [[1, 2], [1, 3]], [[0,0,0,1], [0,1,1,1]])
+```
+returns a BMP whose first output is the AND of the outputs `1` and `2` of
+`chip`, and whose second output is the OR of the outputs `1` and `3`.
+"""
 function multiapply(
     chip::BMP,
     bits::Vector{<:Vector{<:Integer}},
@@ -39,6 +53,20 @@ function multiapply(
     return BMP(clean1_rl(mats, R), [0,1], copy(chip.order))
 end
 
+"""
+    layerapply(bmp::BMP, bits::Vector{<:Vector{<:Integer}}, tabs::Vector{<:Vector{<:Integer}})
+
+Given a joint BMP `chip` representing a reversible circuit, uses
+[`multiapply`](@ref) to sythesize the BMP representing the application of
+a layer of gates. Each element of `bits` is vector indicating the bits that
+enter a gate, while the corresponding element of `tabs` indicates the
+permutation implemented by the gate. For example, the call
+```
+layerapply(chip, [[1,4], [2,3]], [[0,1,3,2], [0,3,2,1]])
+```
+simulates the action of two CNOT gates: One on bitlines `1` and `4` where `1`
+is the control, and another on bitlines `2` and `3` with `3` as the control.
+"""
 function layerapply(
     bmp::BMP,
     bits::Vector{<:Vector{<:Integer}},

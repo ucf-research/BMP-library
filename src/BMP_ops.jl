@@ -1,3 +1,11 @@
+"""
+    insert_var(bmp::BMP, p::Integer)
+
+Returns a BMP that represents the same functions as `bmp`, but with an
+additional (inert) input variable at position `p`. If `p` is not specified,
+it is set to `length(bmp)+1`, i.e. the end of the matrix train. The label of
+the new variable is always `length(bmp)+1`.
+"""
 function insert_var(bmp::BMP, p::Integer)
     n = length(bmp)
     M = Matrix{RowSwitchMatrix}(undef, (n+1,2))
@@ -19,6 +27,13 @@ function insert_var(bmp::BMP)
     return insert_var(bmp, n+1)
 end
 
+"""
+    restrict(bmp::BMP, var::Integer, val::Integer)
+
+Return the BMP of the function that is obtained upon fixing the value of
+variable `var` to `val` in the function represented by `bmp`. The variable with
+the label `var` is not removed.
+"""
 function restrict(bmp::BMP, var::Integer, val::Integer)
     M = copy(bmp.M)
     p = bmp.position[var]
@@ -27,6 +42,13 @@ function restrict(bmp::BMP, var::Integer, val::Integer)
     return BMP(clean1(M, bmp.R), [0,1], copy(bmp.order))
 end
 
+"""
+    erase_var(bmp::BMP, var::Integer, val::Integer)
+
+Similar to [`restrict`](@ref), but removes the inert variable from the BMP.
+This causes a relabeling of all variables with labels greater than `var`, so
+the labels in the resulting BMP are `1` through `length(bmp)-1`.
+"""
 function erase_var(bmp::BMP, var::Integer, val::Integer)
     n = length(bmp)
     p = bmp.position[var]
@@ -85,6 +107,12 @@ function swap!(bmp::BareBMP, i::Integer)
     bmp[i+1,2] = RowSwitchMatrix(R1, mats[2,2].ncols)
 end
 
+"""
+    swap!(bmp::BMP, i::Integer)
+
+Swaps the input variables at positions `i` and `i+1`. Note that unlike most
+BMP functions, `swap!` modifies `bmp`.
+"""
 function swap!(bmp::BMP, i::Integer)
     swap!(bmp.M, i)
     temp = bmp.order[i]
@@ -94,6 +122,12 @@ function swap!(bmp::BMP, i::Integer)
     bmp.position[bmp.order[i+1]] = i+1
 end
 
+"""
+    reorder!(bmp::BMP, pord::Vector{<:Integer})
+
+Changes the variable ordering of `bmp` to `pord` using local swaps via
+[`swap!`](@ref).
+"""
 function reorder!(bmp, pord::Vector{<:Integer})
     for (dest, var) in enumerate(pord)
         src = bmp.position[var]
@@ -103,6 +137,13 @@ function reorder!(bmp, pord::Vector{<:Integer})
     end
 end
 
+"""
+    joinfuncs(bmps::Vector{BMP})
+
+Generates a joint BMP of the functions represented by the elements of `bmps`.
+The outputs bits of the BMPs in `bmps` are stacked on top of each other in the
+order they are given in `bmps`.
+"""
 function joinfuncs(bmps::Vector{BMP})
     n = size(bmps[1].M, 1)
     mats = Matrix{RowSwitchMatrix}(undef, (n, 2))

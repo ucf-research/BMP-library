@@ -43,6 +43,15 @@ function apply_noclean(bmp1::BMP, bmp2::BMP, htab::Vector{<:Integer})
     return BMP(mats, apply_term(bmp1.R, bmp2.R, htab), copy(bmp1.order))
 end
 
+"""
+    apply(bmp1::BMP, bmp2::BMP, htab::Vector{<:Integer})
+
+Returns the result of the direct-product APPLY method performed on `bmp1` and
+`bmp2`. The truth table of the function is given in `htab` in the order where
+`bmp1` value is the most significant bit.
+
+See also [`minapply`](@ref).
+"""
 function apply(bmp1::BMP, bmp2::BMP, htab::Vector{<:Integer})
     return clean1(apply_noclean(bmp1, bmp2, htab))
 end
@@ -69,6 +78,15 @@ function apply_noclean(bmps::Vector{BMP}, htab::Vector{<:Integer})
     return BMP(mats, apply_term([bmp.R for bmp in bmps], htab), copy(bmps[1].order))
 end
 
+"""
+    apply(bmps::Vector{BMP}, htab::Vector{<:Integer})
+
+Returns the result of the direct-product APPLY method performed on the elements
+of `bmps`. The truth table of the function is given in `htab`, in the order
+where the most significant bit corresponds to `bmps[1]`.
+
+See also [`minapply`](@ref)
+"""
 function apply(bmps::Vector{BMP}, htab::Vector{<:Integer})
     return clean1(apply_noclean(bmps, htab))
 end

@@ -57,6 +57,12 @@ function clean1_rl(bmp::BareBMP, R::Vector{<:Integer})::BareBMP
     return M
 end
 
+"""
+    clean1_rl(bmp::BMP)
+
+Performs RTL-cleaning on `bmp`. The input BMP is not modified, the return value
+is a new BMP.
+"""
 function clean1_rl(bmp::BMP)
     return BMP(clean1_rl(bmp.M, bmp.R), [0,1], copy(bmp.order))
 end
@@ -71,6 +77,12 @@ function clean1_lr(bmp::BareBMP)::BareBMP
     return M
 end
 
+"""
+    clean1_lr(bmp::BMP)
+
+Performs LTR-cleaning on `bmp`. The input BMP is not modified, the return value
+is a new BMP.
+"""
 function clean1_lr(bmp::BMP)
     return BMP(clean1_lr(bmp.M), copy(bmp.R), copy(bmp.order))
 end
@@ -93,6 +105,12 @@ function clean1(bmp::BareBMP, R::Vector{<:Integer})::BareBMP
     return M
 end
 
+"""
+    clean1(bmp::BMP)
+
+Performs LTR-cleaning followed by RTL-cleaning on `bmp`. The input BMP is not
+modified, the return value is a new BMP.
+"""
 function clean1(bmp::BMP)
     return BMP(clean1(bmp.M, bmp.R), [0,1], copy(bmp.order))
 end

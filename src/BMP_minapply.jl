@@ -36,6 +36,15 @@ function minapply_term(
     return R
 end
 
+"""
+    minapply(bmp1::BMP, bmp2::BMP, htab::Vector{<:Integer})
+
+Returns the result of the direct-sum APPLY method performed on `bmp1` and
+`bmp2`. The truth table of the function is given in `htab` in the order where
+`bmp1` value is the most significant bit.
+
+See also [`apply`](@ref).
+"""
 function minapply(bmp1::BMP, bmp2::BMP, htab::Vector{<:Integer})::BMP
     M, U = minapply(bmp1.M, bmp2.M)
     return BMP(M, minapply_term(U, bmp1.R, bmp2.R, htab), copy(bmp1.order))
@@ -79,6 +88,15 @@ function minapply_term(
     return R
 end
 
+"""
+    minapply(bmps::Vector{BMP}, htab::Vector{<:Integer})
+
+Returns the result of the direct-sum APPLY method performed on the elements
+of `bmps`. The truth table of the function is given in `htab`, in the order
+where the most significant bit corresponds to `bmps[1]`.
+
+See also [`apply`](@ref).
+"""
 function minapply(bmps::Vector{BMP}, htab::Vector{<:Integer})::BMP
     M, U = minapply([bmp.M for bmp in bmps])
     R = minapply_term(U, [bmp.R for bmp in bmps], htab)

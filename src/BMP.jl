@@ -1,5 +1,18 @@
+"""
+    BareBMP
+
+An alias for `Matrix{RowSwitchMatrix}`. Describes matrix product without
+the terminal vector or the variable ordering information, for cases where
+these should be handled separately.
+"""
 const BareBMP = Matrix{RowSwitchMatrix}
 
+"""
+    BMP
+
+The main type used to represent binary matrix products. In addition to the
+matrices, contains fields for the terminal vector and variable ordering.
+"""
 struct BMP
     M::Matrix{RowSwitchMatrix}
     R::Vector{RSMInt}
@@ -24,11 +37,22 @@ function bare_bmp(val::Integer, n::Integer)::BareBMP
     return mats
 end
 
+"""
+    BMP(val::Integer, n::Integer)
+
+Returns a BMP for the constant function of value `val` of `n` input bits.
+"""
 function BMP(val::Integer, n::Integer)
     mats = bare_bmp(val, n)
     return BMP(mats, [0,1], collect(1:n))
 end
 
+"""
+    BMP(val::Integer, order::Vector{<:Integer})
+
+Returns a BMP for the constant function of value `val` with the variable
+ordering `order`.
+"""
 function BMP(val::Integer, order::Vector{<:Integer})
     mats = bare_bmp(val, length(order))
     return BMP(mats, [0,1], copy(order))
@@ -48,18 +72,33 @@ function projbmp_bare(xi::Integer, n::Integer)::BareBMP
     return mats
 end
 
+"""
+    projbmp(xi::Integer, n::Integer)
+
+Returns a BMP of the projection to `xi` of `n` input variables,
+i.e. ``f(x_1,\\dotsc, x_i, \\dotsc, x_n) = x_i``.
+"""
 function projbmp(xi::Integer, n::Integer)
     mats = projbmp_bare(xi, n)
     return BMP(mats, [0,1], collect(1:n))
 end
 
+"""
+    projbmp(xi::Integer, order::Vector{<:Integer})
+
+Returns the BMP of the projection to `xi` for the variable ordering `order`.
+"""
 function projbmp(xi::Integer, order::Vector{<:Integer})
     pos = findfirst(order .== xi)
     mats = projbmp_bare(pos, length(order))
     return BMP(mats, [0,1], copy(order))
 end
 
-# Convenience functions
+"""
+    Base.length(bmp::BMP)
+
+Returns the number of input bits of `bmp`.
+"""
 function Base.length(bmp::BMP)
     return size(bmp.M, 1)
 end
@@ -72,10 +111,21 @@ function bonddims(bmp::BareBMP, i::Integer)
     return length(bmp[i,1].rows)
 end
 
+"""
+    bonddims(bmp::BMP)
+
+Returns the bond dimensions of the BMP as an array. The terminal vector size
+is not included in this array.
+"""
 function bonddims(bmp::BMP)
     return bonddims(bmp.M)
 end
 
+"""
+    bonddims(bmp::BMP, i::Integer)
+
+Returns the `i`-th bond dimension in the BMP.
+"""
 function bonddims(bmp::BMP, i::Integer)
     return bonddims(bmp.M, i)
 end
@@ -92,11 +142,15 @@ function volume(bmp::BareBMP, R::Vector{<:Integer}=[0,1])
     return sum(length(m.rows) for m in bmp[:,1]) + length(R)
 end
 
+"""
+    volume(bmp::BMP)
+
+Returns the sum of all bond dimensions, including the terminal vector length.
+"""
 function volume(bmp::BMP)
     return volume(bmp.M, bmp.R)
 end
 
-# Evaluation
 function evalfunc(bmp::BareBMP, x::BitArray, R::Vector{<:Integer}, order::Vector{<:Integer})::BitArray
     n = size(bmp, 1)
     m = length(bmp[1,1].rows)
@@ -125,6 +179,14 @@ function evalfunc(bmp::BareBMP, x::BitArray, R::Vector{<:Integer}, order::Vector
     return reshape(result, Tuple(shape))
 end
 
+"""
+    evalfunc(bmp::BMP, x::BitArray)
+
+Evaluates the BMP for the inputs given in `x`. The first dimension of `x` must
+have dimension `length(bmp)`. The first dimension of the output will be the
+number of output bits of `bmp`. The rest of the dimensions of `x` and the
+output match.
+"""
 function evalfunc(bmp::BMP, x::BitArray)::BitArray
     return evalfunc(bmp.M, x, bmp.R, bmp.order)
 end
@@ -134,7 +196,6 @@ function evalfunc(bmp::BMP, x::Array{<:Integer})
     return Array{eltype(x)}(f)
 end
 
-# Save and load BMPs
 function save_bmp(fpath::String, bmp::BMP)
     f = open(fpath, "w")
     n = length(bmp)
