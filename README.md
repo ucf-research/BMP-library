@@ -27,7 +27,7 @@ $ julia --project=/path/to/your-project foo.jl
 ```
 
 ## Documentation
-In order to locally compile the project documentation clone the repository and
+In order to locally compile the project documentation, clone the repository and
 run `make.jl` under the `docs` folder:
 ```
 $ git clone https://github.com/ucf-research/BMP-library.git
