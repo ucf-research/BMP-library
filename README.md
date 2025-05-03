@@ -26,4 +26,16 @@ In order to run these files you need to use the environment you created:
 $ julia --project=/path/to/your-project foo.jl
 ```
 
+## Documentation
+In order to locally compile the project documentation clone the repository and
+run `make.jl` under the `docs` folder:
+```
+$ git clone https://github.com/ucf-research/BMP-library.git
+$ cd BMP-library/docs
+$ julia --project make.jl
+```
+The documentation can then be accessed through `index.html` under
+`BMP-library/docs/build`.
+
+## Acknowledgements
 This work is based on research supported by the National Science Foundation under grants OIA-2428487 and OIA-2428488.
