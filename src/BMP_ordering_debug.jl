@@ -1,3 +1,5 @@
+# This file is a part of BMP-library. License is Apache 2.0: https://julialang.org/license
+
 function logged_exact_minimize!(bmp::BMP, output::IO)
     n = length(bmp)
     # Initialization of the maps
