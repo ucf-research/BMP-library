@@ -1,3 +1,5 @@
+# This file is a part of BMP-library. License is Apache 2.0: https://julialang.org/license
+
 """
     insert_var(bmp::BMP, p::Integer)
 

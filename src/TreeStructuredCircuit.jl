@@ -1,3 +1,5 @@
+# This file is a part of BMP-library. License is Apache 2.0: https://julialang.org/license
+
 function effective_order(q::Integer, layers::Vector{<:Integer}, k::Integer=3)
     result = fill(0, k^q)
     terms = k .^(layers .- 1)

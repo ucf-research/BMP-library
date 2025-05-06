@@ -1,3 +1,5 @@
+# This file is a part of BMP-library. License is Apache 2.0: https://julialang.org/license
+
 function generate_bmp(n::Integer, m::Integer, f::Vector{<:Integer})
     mats = Matrix{RowSwitchMatrix}(undef, (n,2))
     d = m
