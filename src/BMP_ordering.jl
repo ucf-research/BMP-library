@@ -1,3 +1,5 @@
+# This file is a part of BMP-library. License is Apache 2.0: https://julialang.org/license
+
 function get_swap_position(n::Integer, i::Integer)
     if n == 2
         return 1
