@@ -1,3 +1,5 @@
+# This file is a part of BMP-library. License is Apache 2.0: https://julialang.org/license
+
 function apply_term(R1::Vector{<:Integer}, R2::Vector{<:Integer}, htab::Vector{<:Integer})
     R = [htab[2*i+j+1] for (j,i) in Iterators.product(R2, R1)]
     R = reshape(R, length(R))
