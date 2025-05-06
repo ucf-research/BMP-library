@@ -1,3 +1,5 @@
+# This file is a part of BMP-library. License is Apache 2.0: https://julialang.org/license
+
 function multiapply_noclean(
     chip::BareBMP,
     bits::Vector{<:Vector{<:Integer}}
