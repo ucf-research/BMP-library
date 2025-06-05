@@ -78,7 +78,7 @@ end
     projbmp(xi::Integer, n::Integer)
 
 Returns a BMP of the projection to `xi` of `n` input variables,
-i.e. ``f(x_1,\\dotsc, x_i, \\dotsc, x_n) = x_i``.
+i.e. the function ``f(x_1,\\dotsc, x_i, \\dotsc, x_n) = x_i``.
 """
 function projbmp(xi::Integer, n::Integer)
     mats = projbmp_bare(xi, n)
@@ -182,12 +182,14 @@ function evalfunc(bmp::BareBMP, x::BitArray, R::Vector{<:Integer}, order::Vector
 end
 
 """
-    evalfunc(bmp::BMP, x::BitArray)
+    evalfunc(bmp::BMP, x)
 
-Evaluates the BMP for the inputs given in `x`. The first dimension of `x` must
-have dimension `length(bmp)`. The first dimension of the output will be the
-number of output bits of `bmp`. The rest of the dimensions of `x` and the
-output match.
+Evaluates the BMP for the inputs given in `x`. `x` can have any number of dimensions and is treated as
+a stack of input vectors that live along the first dimension. In other words, the slice `[:,i1,i2,...]` of the return value
+contains the result of evaluating the BMP for `x[:,i1,i2,...]`. (This means that the first dimension of `x`
+must have size `length(bmp)`; the size of first dimension of the return value is the number of output bits.)
+
+If performance is concern, `x` should be of type `BitArray`.
 """
 function evalfunc(bmp::BMP, x::BitArray)::BitArray
     return evalfunc(bmp.M, x, bmp.R, bmp.order)
