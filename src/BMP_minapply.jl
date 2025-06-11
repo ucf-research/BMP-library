@@ -71,39 +71,49 @@ function minapply(bmp1::BMP, bmp2::BMP, htab::Vector{<:Integer})::BMP
 end
 
 function minapply_noclean(bmps::Vector{BareBMP})
-    n = size(bmps[1],1)
+    n = size(bmps[1], 1)
     k = length(bmps)
-    U = fill(RSMInt(1), (k,1))
+    init_view = CustomView(fill(RSMInt(1), k), 1, k)
+    U = Dict{CustomView, RSMInt}()
+    U[init_view] = 1
     mats = Matrix{RowSwitchMatrix}(undef, (n,2))
-    for i=1:size(bmps[1],1)
-        A = Dict{Vector{RSMInt}, RSMInt}()
-        S0 = [get!(A, [bmps[j][i,1].rows[U[j,r]] for j=1:k], length(A)+1)
-            for r in axes(U,2)]
-        S1 = [get!(A, [bmps[j][i,2].rows[U[j,r]] for j=1:k], length(A)+1)
-            for r in axes(U,2)]
-        mats[i,1] = RowSwitchMatrix(S0, length(A))
-        mats[i,2] = RowSwitchMatrix(S1, length(A))
-        U = fill(RSMInt(1), (k,length(A)))
-        for key in keys(A)
-            U[:, A[key]] .= key
+    site_mats = Matrix{RowSwitchMatrix}(undef, (k,2))
+    for i=1:n
+        for b=1:2, j=1:k
+            site_mats[j,b] = bmps[j][i,b]
         end
+        chi = length(U)
+        A = propagate_mat(U, site_mats)
+        #
+        U = Dict{CustomView, RSMInt}()
+        S = [fill(RSMInt(0), chi), fill(RSMInt(0), chi)]
+        for b=0:1
+            for r=1:chi
+                rbegin = A.rbegin[r + b * chi]
+                rend = A.rend[r + b * chi]
+                row_key = CustomView(A.data, rbegin, rend)
+                S[b+1][r] = get!(U, row_key, length(U)+1)
+            end
+        end
+        mats[i,1] = RowSwitchMatrix(S[1], length(U))
+        mats[i,2] = RowSwitchMatrix(S[2], length(U))
     end
     return (mats, U)
 end
 
 function minapply_term(
-    U::Matrix{RSMInt},
+    U::Dict{CustomView, RSMInt},
     Rs::Vector{<:Vector{<:Integer}},
     htab::Vector{<:Integer}
 )
-    R = fill(0, size(U,2))
-    k = size(U,1)
-    for i=1:size(U,2)
+    R = fill(0, length(U))
+    for (vw, k) in pairs(U)
         val = 0
-        for j=1:k
-            val = 2*val + Rs[k][U[j,i]]
+        len = vw.re - vw.rb + 1
+        for (i,j) in zip(vw.data[vw.rb:vw.re], 1:len)
+            val = 2 * val + Rs[j][i]
         end
-        R[i] = htab[val+1]
+        R[k] = htab[val+1]
     end
     return R
 end
@@ -113,15 +123,15 @@ function minapply(
     Rs::Vector{<:Vector{<:Integer}},
     htab::Vector{<:Integer}
 )
-    M, U = minapply_noclean(bmps)
+    mats, U = minapply_noclean(bmps)
     R = minapply_term(U, Rs, htab)
-    return clean1_rl(M, R)
+    return clean1_rl(mats, R)
 end
 
-function minapply_noclean(bmps::Vector{BMP}, htab::Vector{<:Integer})::BMP
-    M, U = minapply_noclean([bmp.M for bmp in bmps])
+function minapply_noclean(bmps::Vector{BMP}, htab::Vector{<:Integer})
+    mats, U = minapply_noclean([bmp.M for bmp in bmps])
     R = minapply_term(U, [bmp.R for bmp in bmps], htab)
-    return BMP(M, R, copy(bmps[1].order))
+    return BMP(mats, R, copy(bmps[1].order))
 end
 
 """
@@ -133,8 +143,10 @@ where the most significant bit corresponds to `bmps[1]`.
 
 See also [`apply`](@ref).
 """
-function minapply(bmps::Vector{BMP}, htab::Vector{<:Integer})::BMP
-    M, U = minapply_noclean([bmp.M for bmp in bmps])
+function minapply(bmps::Vector{BMP}, htab::Vector{<:Integer})
+    mats, U = minapply_noclean([bmp.M for bmp in bmps])
     R = minapply_term(U, [bmp.R for bmp in bmps], htab)
-    return BMP(clean1_rl(M, R), [0,1], copy(bmps[1].order))
+    mats_ = clean1_rl(mats, R)
+    return BMP(mats_, [0,1], copy(bmps[1].order))
 end
+

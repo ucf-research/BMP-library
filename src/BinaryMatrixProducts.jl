@@ -16,6 +16,7 @@ export clean1_rl, clean1_lr, clean1
 include("BMP_clean.jl")
 export apply, minapply, multiapply, layerapply
 include("BMP_apply.jl")
+include("CustomSparseMat.jl")
 include("BMP_minapply.jl")
 include("BMP_multiapply.jl")
 export insert_var, restrict, erase_var
