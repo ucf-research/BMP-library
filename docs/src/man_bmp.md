@@ -15,7 +15,7 @@ Here, `M` should have size `(n, 2)` where `n` is the number of input bits. The
 first dimension of this array corresponds to the position on the product, while
 the second one corresponds to the value of the input bit at this position. The
 `order` array must be of length `n`, consistent with `M`, and specifies the
-label of the variable in each position. `R` is the terminal vector the
+label of the variable in each position. `R` is the terminal vector that
 multiplies to the product.
 
 In most cases, you should not use the inner constructor to create BMPs. The
@@ -124,7 +124,7 @@ out2 = evalfunc(bmp2, all_inputs)
 Both output arrays are the same.
 
 ### Bare BMPs
-As metioned above, the `BMP` type stores some extra information about for the
+As metioned above, the `BMP` type stores some extra information about the
 variable ordering and the terminal vector. In cases where these need to be
 handled separately, or perhaps multiple disjoint BMPs with the same variable
 ordering and terminal vectors are being processed, you may wish to use a
@@ -134,8 +134,8 @@ defined on `BareBMP`, although you do need to use extra arguments in a few
 cases.
 
 ## Compression or "cleaning"
-An important BMP operation that is used internally by pretty much all other
-operations is called CLEAN. This operation compressed the BMP to its smallest
+An important BMP operation that is used internally by nearly all other
+operations is called CLEAN. This operation compresses the BMP to its smallest
 size possible with row-switching matrices. This operation can be performed
 left-to-right (LTR) or right-to-left, to obtain different types of reductions.
 In order to invoke these manually, you can use
@@ -228,12 +228,12 @@ const1 = BMP(1, 3)
 
 t1 = apply(const1, x1, [0, 1, 1, 0])
 t2 = apply(x2, x3, [0, 0, 0, 1])
-bmp = apply(t1, t2, [0, 1, 1, 1])
+bmp1 = apply(t1, t2, [0, 1, 1, 1])
 ```
-We used the XOR operation to obtain the inversion of ``x_1``. In this examples,
-the final BMP can be obtained instead in a single step as
+We used the XOR operation to obtain the inversion of ``x_1``. In this example,
+the final BMP can also be obtained instead in a single step as
 ```julia
-bmp = apply([x1, x2, x3], [1, 1, 1, 1, 0, 0, 0, 1])
+bmp2 = apply([x1, x2, x3], [1, 1, 1, 1, 0, 0, 0, 1])
 ```
 You can verify the equivalence of the two BMPs by evaluating them for various
 input values using `evalfunc`.
@@ -307,7 +307,7 @@ layerapply(
     tabs::Vector{<:Vector{<:Integer}}
 )
 ```
-A reversible circuit consists of reversible gates that have the number of
+A reversible circuit consists of reversible gates that have the same number of
 outputs as inputs. Accordingly, `bits` is a list of gate inputs as before, but
 `tabs` is now a permutation containing the output word for each input word. The
 order of the bitlines is preserved: Regardless of where a gate is specified in
@@ -347,13 +347,13 @@ reorder!(bmp, pord::Vector{<:Integer})
 
 !!! note
     Unlike most of the functions explained in the previous sections, variable
-    ordering functions modify the input BMP, as opposed to creating a new ones.
+    ordering functions modify the input BMP, as opposed to creating a new one.
 
 !!! note
     Changing the variable ordering does not change the order in which variables
     should be specified in `evalfunc`. Evaluating a BMP with the same input bit
     array before and after a `swap!`, `reorder!`, or one of the other methods
-    explained below should yield exactly the same result.
+    explained below must yield exactly the same result.
 
 For the purpose of optimizing the ordering we provide two methods. One of these
 is an exact minimization algorithm adapted from [the paper
