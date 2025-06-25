@@ -24,6 +24,7 @@ function minapply_noclean(
     mats = Matrix{RowSwitchMatrix}(undef, (n,2))
     for i in axes(bmp1,1)
         A = Dict{Tuple{RSMInt, RSMInt}, RSMInt}()
+        sizehint!(A, 2 * length(U))
         S0 = [get!(A, (bmp1[i,1].rows[i1], bmp2[i,1].rows[i2]), length(A)+1)
             for (i1, i2) in U]
         S1 = [get!(A, (bmp1[i,2].rows[i1], bmp2[i,2].rows[i2]), length(A)+1)
@@ -86,6 +87,7 @@ function minapply_noclean(bmps::Vector{BareBMP})
         A = propagate_mat(U, site_mats)
         #
         U = Dict{CustomView, RSMInt}()
+        sizehint!(U, 2 * chi)
         S = [fill(RSMInt(0), chi), fill(RSMInt(0), chi)]
         for b=0:1
             for r=1:chi
