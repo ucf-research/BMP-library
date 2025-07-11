@@ -1,9 +1,9 @@
 # This file is a part of BMP-library. License is Apache 2.0: https://julialang.org/license
 
-const RSMInt = UInt32
+const RSMInt = Int32
 struct RowSwitchMatrix
-    rows::Vector{UInt32}
-    ncols::UInt32
+    rows::Vector{RSMInt}
+    ncols::RSMInt
 end
 
 function RowSwitchMatrix(A::Matrix{<:Integer})

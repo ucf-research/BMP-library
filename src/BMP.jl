@@ -18,12 +18,12 @@ matrices, contains fields for the terminal vector and variable ordering.
 struct BMP
     M::Matrix{RowSwitchMatrix}
     R::Vector{RSMInt}
-    order::Vector{UInt32}
-    position::Vector{UInt32}
+    order::Vector{Int16}
+    position::Vector{Int16}
     function BMP(M::Matrix{RowSwitchMatrix}, R::Vector{<:Integer}, order::Vector{<:Integer})
         position = fill(UInt32(0), length(order))
         # position is the inverse of the permutation given in order
-        position[order] .= order
+        position[order] .= 1:length(order)
         return new(M, R, order, position)
     end
 end
