@@ -179,7 +179,7 @@ function compute_words(k::Integer, nw::Integer, xs::BitVector, order::Matrix{<:I
     return result
 end
 
-function evalfunc(bmp::WordBMP, x::BitArray)
+function evalfunc(bmp::WordBMP, x::AbstractArray)
     n_words = size(bmp.M, 1)
     kin = bmp.isize
     kout = bmp.osize
@@ -187,7 +187,7 @@ function evalfunc(bmp::WordBMP, x::BitArray)
     n_samps = div(length(x), size(x, 1))
     #
     x_ = reshape(x, (n_words * kin, n_samps))
-    result = BitArray(undef, (m_words * kout, n_samps))
+    result = similar(x, (m_words * kout, n_samps))
     mat = fill(RSMInt(0), m_words)
     for j=1:n_samps
         sample_words = compute_words(kin, n_words, x_[:,j], bmp.order)
