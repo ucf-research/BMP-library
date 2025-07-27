@@ -6,7 +6,7 @@ function minapply_term(
     R2::Vector{<:Integer},
     htab::Vector{<:Integer}
 )
-    R = fill(0, length(U))
+    R = fill(RSMInt(0), length(U))
     for (i,pair) in enumerate(U)
         i1, i2 = pair
         val = 2 * R1[i1] + R2[i2]
@@ -68,7 +68,7 @@ See also [`apply`](@ref).
 function minapply(bmp1::BMP, bmp2::BMP, htab::Vector{<:Integer})::BMP
     M, U = minapply_noclean(bmp1.M, bmp2.M)
     R = minapply_term(U, bmp1.R, bmp2.R, htab)
-    return BMP(clean1_rl(M, R), [0,1], copy(bmp1.order))
+    return BMP(clean1_rl(M, R), RSMInt[0,1], copy(bmp1.order))
 end
 
 function minapply_noclean(bmps::Vector{BareBMP})
@@ -108,7 +108,7 @@ function minapply_term(
     Rs::Vector{<:Vector{<:Integer}},
     htab::Vector{<:Integer}
 )
-    R = fill(0, length(U))
+    R = fill(RSMInt(0), length(U))
     for (vw, k) in pairs(U)
         val = 0
         len = vw.re - vw.rb + 1
@@ -149,6 +149,6 @@ function minapply(bmps::Vector{BMP}, htab::Vector{<:Integer})
     mats, U = minapply_noclean([bmp.M for bmp in bmps])
     R = minapply_term(U, [bmp.R for bmp in bmps], htab)
     mats_ = clean1_rl(mats, R)
-    return BMP(mats_, [0,1], copy(bmps[1].order))
+    return BMP(mats_, RSMInt[0,1], copy(bmps[1].order))
 end
 

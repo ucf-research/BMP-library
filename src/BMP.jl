@@ -21,7 +21,7 @@ struct BMP
     order::Vector{Int16}
     position::Vector{Int16}
     function BMP(M::Matrix{RowSwitchMatrix}, R::Vector{<:Integer}, order::Vector{<:Integer})
-        position = fill(UInt32(0), length(order))
+        position = fill(Int16(0), length(order))
         # position is the inverse of the permutation given in order
         position[order] .= 1:length(order)
         return new(M, R, order, position)
@@ -133,7 +133,7 @@ function bonddims(bmp::BMP, i::Integer)
 end
 
 function max_dim(bmp::BareBMP)
-    return maximum(length(m.rows) for m in bmp.M[:,1])
+    return maximum(length(m.rows) for m in bmp[:,1])
 end
 
 function max_dim(bmp::BMP)
@@ -153,17 +153,22 @@ function volume(bmp::BMP)
     return volume(bmp.M, bmp.R)
 end
 
-function evalfunc(bmp::BareBMP, x::BitArray, R::Vector{<:Integer}, order::Vector{<:Integer})::BitArray
+function evalfunc(
+    bmp::BareBMP,
+    x::AbstractArray,
+    R::Vector{<:Integer},
+    order::Vector{<:Integer}
+)
     n = size(bmp, 1)
     m = length(bmp[1,1].rows)
     n_samps = div(length(x), size(x, 1))
     x_ = reshape(x, (n, n_samps))
-    result = BitArray(undef, (m, n_samps))
+    result = similar(x, (m, n_samps))
     mat = fill(RSMInt(0), m)
     prod_mats = Vector{Vector{RSMInt}}(undef, n)
     for j=1:n_samps
         for i=1:n
-            prod_mats[i] = bmp[i, x_[order[i], j]+1].rows
+            prod_mats[i] = bmp[i, x_[order[i],j]+1].rows
         end
         mat .= prod_mats[1]
         for i=2:n
@@ -191,13 +196,8 @@ must have size `length(bmp)`; the size of first dimension of the return value is
 
 If performance is concern, `x` should be of type `BitArray`.
 """
-function evalfunc(bmp::BMP, x::BitArray)::BitArray
+function evalfunc(bmp::BMP, x::AbstractArray)
     return evalfunc(bmp.M, x, bmp.R, bmp.order)
-end
-
-function evalfunc(bmp::BMP, x::Array{<:Integer})
-    f = evalfunc(bmp, x .!= 0)
-    return Array{eltype(x)}(f)
 end
 
 function save_bmp(fpath::String, bmp::BMP)

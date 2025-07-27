@@ -1,7 +1,7 @@
 # This file is a part of BMP-library. License is Apache 2.0: https://julialang.org/license
 
 function apply_term(R1::Vector{<:Integer}, R2::Vector{<:Integer}, htab::Vector{<:Integer})
-    R = [htab[2*i+j+1] for (j,i) in Iterators.product(R2, R1)]
+    R = [RSMInt(htab[2*i+j+1]) for (j,i) in Iterators.product(R2, R1)]
     R = reshape(R, length(R))
     return R
 end
@@ -19,7 +19,7 @@ function apply_term(Rs::Vector{<:Vector{<:Integer}}, htab::Vector{<:Integer})
             inds[i*stride+1:i*stride+stride] .+= R[i % mr + 1]
         end
     end
-    return htab[inds .+ 1]
+    return [RSMInt(htab[i+1]) for i in inds]
 end
 
 function apply_noclean(bmp1::BareBMP, bmp2::BareBMP)::BareBMP

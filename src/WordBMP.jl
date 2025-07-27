@@ -2,12 +2,12 @@
 
 struct WordBMP
     M::Matrix{RowSwitchMatrix}
-    R::Vector{UInt32}
-    order::Matrix{UInt32}
-    wpos::Vector{UInt32}
-    bpos::Vector{UInt32}
-    isize::UInt32
-    osize::UInt32
+    R::Vector{RSMInt}
+    order::Matrix{Int16}
+    wpos::Vector{Int16}
+    bpos::Vector{Int16}
+    isize::Int16
+    osize::Int16
     function WordBMP(
         M::Matrix{RowSwitchMatrix},
         R::Vector{<:Integer},
@@ -20,8 +20,8 @@ struct WordBMP
             throw(AssertionError("Input word size does not match the number of matrices per site."))
         end
         n = length(order)
-        wpos = fill(UInt32(0), n)
-        bpos = fill(UInt32(0), n)
+        wpos = fill(Int16(0), n)
+        bpos = fill(Int16(0), n)
         for i in axes(order,1), j in axes(order,2)
             b = order[i, j]
             bpos[b] = i
@@ -368,7 +368,7 @@ function joinfuncs(bmps::Vector{<:WordBMP})
         M[i,j] = dsum(join_mats)
     end
     nR = sum(length.(bmp.R for bmp in bmps))
-    R = fill(UInt32(0), nR)
+    R = fill(RSMInt(0), nR)
     offset = 0
     for bmp in bmps
         sz = length(bmp.R)
