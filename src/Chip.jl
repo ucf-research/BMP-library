@@ -24,10 +24,10 @@ function Chip(circuit::ReversibleCircuit)
     return chip
 end
 
-function evalfunc(chip::Chip, input::BitArray)
+function evalfunc(chip::Chip, input::AbstractArray)
     n = size(input, 1)
     n_samps = div(length(input), size(input, 1))
-    result = BitArray(undef, (n, n_samps))
+    result = similar(input, (n, n_samps))
     for (i,bl) in enumerate(chip.bitlines)
         temp = evalfunc(bl, input, [0,1], chip.order)
         temp = reshape(temp, (1, n_samps))
@@ -45,16 +45,6 @@ function apply_gate!(chip::Chip, tab::Vector{<:Integer}, bits::Vector{<:Integer}
     end
 end
 
-function minapply_gate!(chip::Chip, tab::Vector{<:Integer}, bits::Vector{<:Integer})
-    sum_bmp, U = minapply(chip.bitlines[bits])
-    n_bits = length(bits)
-    for (i,b) in zip(n_bits-1:-1:0, bits)
-        bit_tab = tab .>> i .& 1
-        R = minapply_term(U, fill([0,1], length(bits)), bit_tab)
-        chip.bitlines[b] = clean1_rl(sum_bmp, R)
-    end
-end
-
 function apply_gate!(chip::Chip, g::ReversibleGate)
     apply_gate!(chip, g.perm, g.bits)
 end
@@ -65,6 +55,29 @@ function apply_circuit!(chip::Chip, circuit::ReversibleCircuit)
     end
     for cg in circuit.gates
         apply_gate!(chip, cg)
+    end
+end
+
+function minapply_gate!(chip::Chip, tab::Vector{<:Integer}, bits::Vector{<:Integer})
+    sum_bmp, U = minapply_noclean(chip.bitlines[bits])
+    n_bits = length(bits)
+    for (i,b) in zip(n_bits-1:-1:0, bits)
+        bit_tab = tab .>> i .& 1
+        R = minapply_term(U, fill([0,1], length(bits)), bit_tab)
+        chip.bitlines[b] = clean1_rl(sum_bmp, R)
+    end
+end
+
+function minapply_gate!(chip::Chip, g::ReversibleGate)
+    minapply_gate!(chip, g.perm, g.bits)
+end
+
+function minapply_circuit!(chip::Chip, circuit::ReversibleCircuit)
+    if circuit.n != length(chip.bitlines)
+        throw(DimensionMismatch("Number of bitlines on the chip and the circuit don't match."))
+    end
+    for cg in circuit.gates
+        minapply_gate!(chip, cg)
     end
 end
 
