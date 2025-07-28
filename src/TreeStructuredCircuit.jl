@@ -43,7 +43,7 @@ end
 function TSC_apply_layer!(
     q::Integer,
     l::Integer,
-    circuit::Circuit,
+    circuit::ReversibleCircuit,
     gates::Vector{<:Vector{<:Integer}},
     k::Integer=3
 )
@@ -77,5 +77,5 @@ function TSC_apply_layer(
             tabs_[bline] = (gates[gi] .>> s) .& 1
         end
     end
-    return BMP_multiapply(bmp, bits_, tabs_)
+    return multiapply(bmp, bits_, tabs_)
 end

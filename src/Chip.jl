@@ -16,6 +16,14 @@ function Chip(n::Integer)
     return Chip(n, collect(1:n))
 end
 
+function Chip(circuit::ReversibleCircuit)
+    chip = Chip(circuit.n, collect(1:circuit.n))
+    for cg in circuit.gates
+        apply_gate!(chip, cg)
+    end
+    return chip
+end
+
 function evalfunc(chip::Chip, input::BitArray)
     n = size(input, 1)
     n_samps = div(length(input), size(input, 1))
@@ -47,11 +55,11 @@ function minapply_gate!(chip::Chip, tab::Vector{<:Integer}, bits::Vector{<:Integ
     end
 end
 
-function apply_gate!(chip::Chip, g::CircuitGate)
-    apply_gate!(chip, g.tab, g.bits)
+function apply_gate!(chip::Chip, g::ReversibleGate)
+    apply_gate!(chip, g.perm, g.bits)
 end
 
-function apply_gate!(chip::Chip, circuit::Circuit)
+function apply_circuit!(chip::Chip, circuit::ReversibleCircuit)
     if circuit.n != length(chip.bitlines)
         throw(DimensionMismatch("Number of bitlines on the chip and the circuit don't match."))
     end
