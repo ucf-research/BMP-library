@@ -32,8 +32,13 @@ export BDD, volume, reduce_bdd!, swap!, save_bdd, load_bdd
 include("BDD.jl")
 include("Conversions.jl")
 
-export Chip, apply_gate!, minapply_gate!, apply_circuit!, join_chip
+export Chip, apply_gate!, minapply_gate!
+export apply_circuit!
+export join_chip
 include("Chip.jl")
+
+export add_random_gates!, apply_random_gates!
+include("RandomCircuits.jl")
 
 export brute_force!, exact_minimize!, sift!
 include("BMP_ordering.jl")
@@ -42,6 +47,9 @@ include("BMP_ordering_debug.jl")
 export WordBMP
 include("WordBMP.jl")
 
+export tsc_ordering
+export TSCLayerGates, tsc_gate_inputs
+export random_tsc, random_tsc_chip
 include("TreeStructuredCircuit.jl")
 
 end
