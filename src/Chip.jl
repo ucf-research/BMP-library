@@ -24,6 +24,14 @@ function Chip(circuit::ReversibleCircuit)
     return chip
 end
 
+function volume(chip::Chip)
+    cnt = 0
+    for mats in chip.bitlines
+        cnt += sum(length(mats[i,1].rows) for i in axes(mats,1))
+    end
+    return cnt
+end
+
 function evalfunc(chip::Chip, input::AbstractArray)
     n = size(input, 1)
     n_samps = div(length(input), size(input, 1))
