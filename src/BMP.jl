@@ -8,6 +8,7 @@ the terminal vector or the variable ordering information, for cases where
 these should be handled separately.
 """
 const BareBMP = Matrix{RowSwitchMatrix}
+const BMPVarInt = Int16
 
 """
     BMP
@@ -18,10 +19,10 @@ matrices, contains fields for the terminal vector and variable ordering.
 struct BMP
     M::Matrix{RowSwitchMatrix}
     R::Vector{RSMInt}
-    order::Vector{Int16}
-    position::Vector{Int16}
-    function BMP(M::Matrix{RowSwitchMatrix}, R::Vector{<:Integer}, order::Vector{<:Integer})
-        position = fill(Int16(0), length(order))
+    order::Vector{BMPVarInt}
+    position::Vector{BMPVarInt}
+    function BMP(M::Matrix{RowSwitchMatrix}, R::AbstractVector, order)
+        position = fill(BMPVarInt(0), length(order))
         # position is the inverse of the permutation given in order
         position[order] .= 1:length(order)
         return new(M, R, order, position)
@@ -29,7 +30,7 @@ struct BMP
 end
 
 # Constructors and initializers
-function bare_bmp(val::Integer, n::Integer)::BareBMP
+function bare_bmp(val::Integer, n::Integer)
     mats = Matrix{RowSwitchMatrix}(undef, (n,2))
     for i=1:n-1
         mats[i,:] = [RowSwitchMatrix(1), RowSwitchMatrix(1)]
@@ -46,21 +47,21 @@ Returns a BMP for the constant function of value `val` of `n` input bits.
 """
 function BMP(val::Integer, n::Integer)
     mats = bare_bmp(val, n)
-    return BMP(mats, [0,1], collect(1:n))
+    return BMP(mats, RSMInt[0,1], Vector{BMPVarInt}(1:n))
 end
 
 """
-    BMP(val::Integer, order::Vector{<:Integer})
+    BMP(val::Integer, order)
 
 Returns a BMP for the constant function of value `val` with the variable
 ordering `order`.
 """
-function BMP(val::Integer, order::Vector{<:Integer})
+function BMP(val::Integer, order)
     mats = bare_bmp(val, length(order))
-    return BMP(mats, [0,1], copy(order))
+    return BMP(mats, RSMInt[0,1], Vector{BMPVarInt}(order))
 end
 
-function projbmp_bare(xi::Integer, n::Integer)::BareBMP
+function projbmp_bare(xi::Integer, n::Integer)
     mats = Matrix{RowSwitchMatrix}(undef, (n,2))
     for i=1:xi-1
         mats[i,:] = [RowSwitchMatrix(1), RowSwitchMatrix(1)]
@@ -82,18 +83,18 @@ i.e. the function ``f(x_1,\\dotsc, x_i, \\dotsc, x_n) = x_i``.
 """
 function projbmp(xi::Integer, n::Integer)
     mats = projbmp_bare(xi, n)
-    return BMP(mats, [0,1], collect(1:n))
+    return BMP(mats, RSMInt[0,1], Vector{BMPVarInt}(1:n))
 end
 
 """
-    projbmp(xi::Integer, order::Vector{<:Integer})
+    projbmp(xi::Integer, order)
 
 Returns the BMP of the projection to `xi` for the variable ordering `order`.
 """
-function projbmp(xi::Integer, order::Vector{<:Integer})
+function projbmp(xi::Integer, order)
     pos = findfirst(order .== xi)
     mats = projbmp_bare(pos, length(order))
-    return BMP(mats, [0,1], copy(order))
+    return BMP(mats, RSMInt[0,1], Vector{BMPVarInt}(order))
 end
 
 """
@@ -140,7 +141,7 @@ function max_dim(bmp::BMP)
     return max_dim(bmp.M)
 end
 
-function volume(bmp::BareBMP, R::Vector{<:Integer}=[0,1])
+function volume(bmp::BareBMP, R::AbstractVector)
     return sum(length(m.rows) for m in bmp[:,1]) + length(R)
 end
 
@@ -156,8 +157,8 @@ end
 function evalfunc(
     bmp::BareBMP,
     x::AbstractArray,
-    R::Vector{<:Integer},
-    order::Vector{<:Integer}
+    R::AbstractVector,
+    order
 )
     n = size(bmp, 1)
     m = length(bmp[1,1].rows)

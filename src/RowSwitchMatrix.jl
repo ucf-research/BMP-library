@@ -20,7 +20,7 @@ function RowSwitchMatrix(n::Integer)
     return RowSwitchMatrix(Vector{RSMInt}(1:n), n)
 end
 
-function mult(a::RowSwitchMatrix, b::RowSwitchMatrix)::RowSwitchMatrix
+function mult(a::RowSwitchMatrix, b::RowSwitchMatrix)
     if length(b.rows) != a.ncols
         throw(DimensionMismatch("Number of columns of a must equal the number of rows of b."))
     end
@@ -33,7 +33,7 @@ function mult_inplace(a::Vector{<:Integer}, b::RowSwitchMatrix)
     end
 end
 
-function kron(a::RowSwitchMatrix, b::RowSwitchMatrix)::RowSwitchMatrix
+function kron(a::RowSwitchMatrix, b::RowSwitchMatrix)
     Na = length(a.rows)
     Nb = length(b.rows)
     Ma = a.ncols
@@ -45,7 +45,7 @@ function kron(a::RowSwitchMatrix, b::RowSwitchMatrix)::RowSwitchMatrix
     )
 end
 
-function kron(mats::Vector{RowSwitchMatrix})::RowSwitchMatrix
+function kron(mats::Vector{RowSwitchMatrix})
     k = length(mats)
     rcnt = length.(m.rows for m in mats)
     nrows = prod(rcnt)
@@ -76,7 +76,7 @@ function kron(mats::Vector{RowSwitchMatrix})::RowSwitchMatrix
     return RowSwitchMatrix(array, ncols)
 end
 
-function dsum(mats::Vector{RowSwitchMatrix})::RowSwitchMatrix
+function dsum(mats::Vector{RowSwitchMatrix})
     nrows = sum(length.(m.rows for m in mats))
     ncols = sum(m.ncols for m in mats)
     array = fill(RSMInt(0), nrows)
