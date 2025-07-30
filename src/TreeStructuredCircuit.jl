@@ -6,7 +6,7 @@ function tsc_ordering(q::Integer, layers::Vector{<:Integer}; k::Integer=3)
     for bit=0:k^q-1
         z = [div(bit, k^l) % k for l=0:q-1]
         loc = sum(terms .* z)
-        result[loc+1] = bit
+        result[loc+1] = bit + 1
     end
     return result
 end
