@@ -168,7 +168,7 @@ function volume(bmp::WordBMP)
     return matrix_volume(bmp) + length(bmp.R)
 end
 
-function compute_words(k::Integer, nw::Integer, xs::BitVector, order::Matrix{<:Integer})
+function compute_words(k::Integer, nw::Integer, xs::AbstractVector, order::Matrix{<:Integer})
     result = fill(0, nw)
     for i=1:nw
         for bi=1:k
