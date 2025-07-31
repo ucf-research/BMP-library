@@ -2,11 +2,11 @@
 
 struct Chip
     bitlines::Vector{BareBMP}
-    order::Vector{UInt32}
-    position::Vector{UInt32}
-    function Chip(n::Integer, order::Vector{<:Integer})
-        position = fill(UInt32(0), length(order))
-        position[order] .= order
+    order::Vector{BMPVarInt}
+    position::Vector{BMPVarInt}
+    function Chip(n::Integer, order)
+        position = Vector{BMPVarInt}(undef, length(order))
+        position[order] .= 1:length(order)
         bitlines = [projbmp_bare(xi, n) for xi in position]
         return new(bitlines, order, position)
     end
