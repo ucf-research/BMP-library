@@ -1,94 +1,83 @@
 # This file is a part of BMP-library. License is Apache 2.0: https://julialang.org/license
 
-function apply_term(R1::Vector{<:Integer}, R2::Vector{<:Integer}, htab::Vector{<:Integer})
-    R = [RSMInt(htab[2*i+j+1]) for (j,i) in Iterators.product(R2, R1)]
-    R = reshape(R, length(R))
+function apply_term(htab::AbstractArray, Rs::NTuple{N, <:AbstractArray}) where {N}
+    sz = prod(length.(Rs))
+    R = Vector{RSMInt}(undef, sz)
+    bvals = ntuple(i -> 2^(i-1), N)
+    for (i, bits) in enumerate(Iterators.product(reverse(Rs)...))
+        R[i] = htab[sum(bits[j] * bvals[j] for j=1:N) + 1]
+    end
     return R
 end
 
-function apply_term(Rs::Vector{<:Vector{<:Integer}}, htab::Vector{<:Integer})
-    nrows = prod(length.(R for R in Rs))
-    inds = fill(0, nrows)
-    stride = nrows
-    for R in Rs
-        inds .*= 2
-        mr = length(R)
-        stride = div(stride, mr)
-        cnt = div(nrows, stride)
-        for i=0:cnt-1
-            inds[i*stride+1:i*stride+stride] .+= R[i % mr + 1]
-        end
-    end
-    return [RSMInt(htab[i+1]) for i in inds]
-end
-
-function apply_noclean(bmp1::BareBMP, bmp2::BareBMP)::BareBMP
-    n = size(bmp1, 1)
-    mats = Matrix{RowSwitchMatrix}(undef, (n,2))
-    for i=1:n, j=1:2
-        mats[i,j] = kron(bmp1[i,j], bmp2[i,j])
-    end
-    return mats
-end
-
-function apply(bmp1::BareBMP, bmp2::BareBMP, htab::Vector{<:Integer})
-    # Assume canonical R
-    return clean1(apply_noclean(bmp1, bmp2), htab)
-end
-
-function apply(bmp1::BareBMP, bmp2::BareBMP, R1::Vector{<:Integer}, R2::Vector{<:Integer}, htab::Vector{<:Integer})
-    return clean1(apply_noclean(bmp1, bmp2), apply_term(R1, R2, htab))
-end
-
-function apply_noclean(bmp1::BMP, bmp2::BMP, htab::Vector{<:Integer})
-    mats = apply_noclean(bmp1.M, bmp2.M)
-    return BMP(mats, apply_term(bmp1.R, bmp2.R, htab), copy(bmp1.order))
-end
-
-"""
-    apply(bmp1::BMP, bmp2::BMP, htab::Vector{<:Integer})
-
-Returns the result of the direct-product APPLY method performed on `bmp1` and
-`bmp2`. The truth table of the function is given in `htab` in the order where
-`bmp1` value is the most significant bit.
-
-See also [`minapply`](@ref).
-"""
-function apply(bmp1::BMP, bmp2::BMP, htab::Vector{<:Integer})
-    return clean1(apply_noclean(bmp1, bmp2, htab))
-end
-
-function apply_noclean(bmps::Vector{BareBMP})::BareBMP
+function apply_noclean(bmps::NTuple{N, BareBMP}) where {N}
     n = size(bmps[1], 1)
     mats = Matrix{RowSwitchMatrix}(undef, (n,2))
     for i=1:n, j=1:2
-        mats[i,j] = kron([M[i,j] for M in bmps])
+        kron_mats = ntuple(x -> bmps[x][i,j], N)
+        mats[i,j] = kron(kron_mats)
     end
     return mats
 end
 
-function apply(bmps::Vector{BareBMP}, htab::Vector{<:Integer})
-    return clean1(apply_noclean(bmps), htab)
+function apply_noclean(bmps::BareBMP...)
+    apply_noclean(bmps)
 end
 
-function apply(bmps::Vector{BareBMP}, Rs::Vector{<:Vector{<:Integer}}, htab::Vector{<:Integer})
-    return clean1(apply_noclean(bmps), apply_term(Rs, htab))
+function apply_noclean(htab::AbstractArray, bmps::Array{BareBMP})
+    N = length(bmps)
+    return apply_noclean(htab, ntuple(i -> bmps[i], N))
 end
 
-function apply_noclean(bmps::Vector{BMP}, htab::Vector{<:Integer})
-    mats = apply_noclean([bmp.M for bmp in bmps])
-    return BMP(mats, apply_term([bmp.R for bmp in bmps], htab), copy(bmps[1].order))
+function apply(htab::AbstractArray, bmps::NTuple{N, BareBMP}, Rs::NTuple{N, <:AbstractArray}) where {N}
+    return clean1(apply_noclean(bmps), apply_term(htab, Rs))
+end
+
+function apply(htab::AbstractArray, bmps::Array{BareBMP}, Rs::AbstractArray{<:AbstractArray})
+    N = length(bmps)
+    return apply(htab, ntuple(i -> bmps[i], N), ntuple(i -> Rs[i], N))
+end
+
+function apply_noclean(htab::AbstractArray, bmps::NTuple{N, BMP}) where {N}
+    mats = ntuple(i -> bmps[i].M, N)
+    Rs = ntuple(i -> bmps[i].R, N)
+    return BMP(apply_noclean(mats), apply_term(htab, Rs), copy(bmps[1].order))
+end
+
+function apply_noclean(htab::AbstractArray, bmps::BMP...)
+    return apply_noclean(htab, bmps)
+end
+
+function apply_noclean(htab::AbstractArray, bmps::Array{BMP})
+    N = length(bmps)
+    return apply_noclean(htab, ntuple(i -> bmps[i], N))
 end
 
 """
-    apply(bmps::Vector{BMP}, htab::Vector{<:Integer})
+    apply(htab::AbstractArray, bmps)
 
-Returns the result of the direct-product APPLY method performed on the elements
-of `bmps`. The truth table of the function is given in `htab`, in the order
-where the most significant bit corresponds to `bmps[1]`.
+Implements the direct-product APPLY operation. `htab` is the truth table of the
+Boolean function being computed; `htab[i]` the output of the function when its inputs
+are set to the bits of `i-1` such that `bmps[1]` corresponds to the most significant bit
+and `bmps[end]` corresponds to the least significant.
 
-See also [`minapply`](@ref)
+See also [`minapply`](@ref).
 """
-function apply(bmps::Vector{BMP}, htab::Vector{<:Integer})
-    return clean1(apply_noclean(bmps, htab))
+function apply(htab::AbstractArray, bmps::NTuple{N, BMP}) where {N}
+    mats = ntuple(i -> bmps[i].M, N)
+    Rs = ntuple(i -> bmps[i].R, N)
+    return BMP(
+        clean1(apply_noclean(mats), apply_term(htab, Rs)),
+        RSMInt[0,1],
+        copy(bmps[1].order)
+    )
+end
+
+function apply(htab::AbstractArray, bmps::BMP...)
+    return apply(htab, bmps)
+end
+
+function apply(htab::AbstractArray, bmps::Array{BMP})
+    N = length(bmps)
+    return apply(htab, ntuple(i -> bmps[i], N))
 end
