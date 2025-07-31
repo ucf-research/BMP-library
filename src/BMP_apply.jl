@@ -24,9 +24,9 @@ function apply_noclean(bmps::BareBMP...)
     apply_noclean(bmps)
 end
 
-function apply_noclean(htab::AbstractArray, bmps::Array{BareBMP})
+function apply_noclean(bmps::Array{BareBMP})
     N = length(bmps)
-    return apply_noclean(htab, ntuple(i -> bmps[i], N))
+    return apply_noclean(ntuple(i -> bmps[i], N))
 end
 
 function apply(htab::AbstractArray, bmps::NTuple{N, BareBMP}, Rs::NTuple{N, <:AbstractArray}) where {N}

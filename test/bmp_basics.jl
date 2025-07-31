@@ -26,8 +26,8 @@ using Test
     for i=1:2:n
         x1 = projbmp(i, n)
         x2 = projbmp(i+1, n)
-        t = apply(x1, x2, g_and)
-        bmp1 = apply(bmp1, t, g_or)
+        t = apply(g_and, x1, x2)
+        bmp1 = apply(g_or, bmp1, t)
     end
     @test all(evalfunc(bmp0, all_inputs) .== evalfunc(bmp1, all_inputs))
     # Effect of the variable ordering
@@ -36,8 +36,8 @@ using Test
     for i=1:2:n
         x1 = projbmp(i, vorder)
         x2 = projbmp(i+1, vorder)
-        t = apply(x1, x2, g_and)
-        bmp2 = apply(bmp2, t, g_or)
+        t = apply(g_and, x1, x2)
+        bmp2 = apply(g_or, bmp2, t)
     end
     @test all(evalfunc(bmp0, all_inputs) .== evalfunc(bmp2, all_inputs))
     n2 = div(n, 2)

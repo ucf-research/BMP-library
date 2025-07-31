@@ -6,8 +6,8 @@ function compare_apply(n::Integer)
     g = generate_bmp(n, 1, rand(0:1, 2^n))
     h = rand(0:1, 4)
     println("n = $(n), k = 2")
-    bmp1 = @time apply(f, g, h)
-    bmp2 = @time minapply(f, g, h)
+    bmp1 = @time apply(h, f, g)
+    bmp2 = @time minapply(h, f, g)
     tests_in = bitrand(n, 1000)
     @show all(evalfunc(bmp1, tests_in) .== evalfunc(bmp2, tests_in))
 end
@@ -16,8 +16,8 @@ function compare_apply(n::Integer, k::Integer)
     fs = [generate_bmp(n, 1, rand(0:1, 2^n)) for _ in 1:k]
     h = rand(0:1, 2^k)
     println("n = $(n), k = $(k)")
-    bmp1 = @time apply(fs, h)
-    bmp2 = @time minapply(fs, h)
+    bmp1 = @time apply(h, fs)
+    bmp2 = @time minapply(h, fs)
     tests_in = bitrand(n, 1000)
     @show all(evalfunc(bmp1, tests_in) .== evalfunc(bmp2, tests_in))
 end
@@ -36,8 +36,8 @@ function build_adder(n::Integer, apply_func::Function, good_order::Bool)
         end
         x = projbmp(xi, 2*n)
         y = projbmp(yi, 2*n)
-        outputs[i] = apply_func([x, y, c], g_bit)
-        c = apply_func([x, y, c], g_carry)
+        outputs[i] = apply_func(g_bit, [x, y, c])
+        c = apply_func(g_carry, [x, y, c])
     end
     outputs[n+1] = c
     return joinfuncs(outputs)

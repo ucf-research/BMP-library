@@ -9,8 +9,8 @@ function build_adder(n::Integer)
     for i=1:n
         xi = projbmp(i, 2*n)
         yi = projbmp(i+n, 2*n)
-        push!(outputs, apply([xi, yi, c], g_digit))
-        c = apply([xi, yi, c], g_carry)
+        push!(outputs, apply(g_digit, [xi, yi, c]))
+        c = apply(g_carry, [xi, yi, c])
     end
     return joinfuncs([outputs; c])
 end

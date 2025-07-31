@@ -73,9 +73,9 @@ function erase_var(bmp::BMP, var::Integer, val::Integer)
 end
 
 function compose(bmp::BMP, var::Integer, sub::BMP)
-    t1 = apply(sub, restrict(bmp, var, 0), [0,1,0,0])
-    t2 = apply(sub, restrict(bmp, var, 1), [0,0,0,1])
-    return apply(t1, t2, [0,1,1,1])
+    t1 = apply([0,1,0,0], sub, restrict(bmp, var, 0))
+    t2 = apply([0,0,0,1], sub, restrict(bmp, var, 1))
+    return apply([0,1,1,1], t1, t2)
 end
 
 function swap!(bmp::BareBMP, i::Integer)

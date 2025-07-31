@@ -44,8 +44,8 @@ function evalfunc(chip::Chip, input::AbstractArray)
     return reshape(result, size(input))
 end
 
-function apply_gate!(chip::Chip, tab::Vector{<:Integer}, bits::Vector{<:Integer})
-    tensor_bmp = apply_noclean(chip.bitlines[bits])
+function apply_gate!(chip::Chip, tab::Array{<:Integer}, bits)
+    tensor_bmp = apply_noclean(map(i -> chip.bitlines[i], bits))
     n_bits = length(bits)
     for (i,b) in zip(n_bits-1:-1:0, bits)
         bit_tab = tab .>> i .& 1
@@ -66,12 +66,13 @@ function apply_circuit!(chip::Chip, circuit::ReversibleCircuit)
     end
 end
 
-function minapply_gate!(chip::Chip, tab::Vector{<:Integer}, bits::Vector{<:Integer})
-    sum_bmp, U = minapply_noclean(chip.bitlines[bits])
+function minapply_gate!(chip::Chip, tab::Array{<:Integer}, bits)
+    sum_bmp, U = minapply_noclean(map(i -> chip.bitlines[i], bits))
     n_bits = length(bits)
+    Rs = map(i -> [0,1], bits)
     for (i,b) in zip(n_bits-1:-1:0, bits)
         bit_tab = tab .>> i .& 1
-        R = minapply_term(U, fill([0,1], length(bits)), bit_tab)
+        R = minapply_term(bit_tab, U, Rs)
         chip.bitlines[b] = clean1_rl(sum_bmp, R)
     end
 end
