@@ -11,8 +11,7 @@ function clean1_lrstep(mats::Matrix{RowSwitchMatrix})
     # Transformed matrices on the right
     R0 = fill(RSMInt(0), length(U))
     R1 = fill(RSMInt(0), length(U))
-    for k in keys(U)
-        ind = U[k]
+    for (k, ind) in pairs(U)
         R0[ind] = mats[2,1].rows[k]
         R1[ind] = mats[2,2].rows[k]
     end
@@ -22,22 +21,25 @@ function clean1_lrstep(mats::Matrix{RowSwitchMatrix})
 end
 
 function clean1_rlstep(mats::Matrix{RowSwitchMatrix})
-    # Store unique rows of the matrix pair on the right in a dictionary
+    # SU decomposition: S as an array and U as a dictionary
     U = Dict{Tuple{RSMInt, RSMInt}, RSMInt}()
-    for pair in zip(mats[2,1].rows, mats[2,2].rows)
-        get!(U, pair, length(U)+1)
+    S = Vector{RSMInt}(undef, length(mats[2,1].rows))
+    for (i, pair) in enumerate(zip(mats[2,1].rows, mats[2,2].rows))
+        S[i] = get!(U, pair, length(U)+1)
     end
     # Elements of the new matrices on the left
     result = Matrix{RowSwitchMatrix}(undef, (2,2))
-    L0 = [get(U, (mats[2,1].rows[i], mats[2,2].rows[i]), 0) for i in mats[1,1].rows]
+    L0 = [S[i] for i in mats[1,1].rows]
     result[1,1] = RowSwitchMatrix(L0, length(U))
-    L1 = [get(U, (mats[2,1].rows[i], mats[2,2].rows[i]), 0) for i in mats[1,2].rows]
+    L1 = [S[i] for i in mats[1,2].rows]
     result[1,2] = RowSwitchMatrix(L1, length(U))
+    # NOTE: L0, L1 can be obtained directly from U with no S, but using S
+    # turns out to be more efficient
+    #
     # Elements of the new matrices on the right
     R0 = fill(RSMInt(0), length(U))
     R1 = fill(RSMInt(0), length(U))
-    for k in keys(U)
-        ind = U[k]
+    for (k, ind) in pairs(U)
         R0[ind] = k[1]
         R1[ind] = k[2]
     end
