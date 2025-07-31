@@ -46,12 +46,14 @@ function clean1_rlstep(mats::Matrix{RowSwitchMatrix})
     return result
 end
 
-function clean1_rl(bmp::BareBMP, R::Vector{<:Integer})::BareBMP
+function clean1_rl(bmp::BareBMP, R::AbstractArray)
     n = size(bmp, 1)
     M = copy(bmp)
-    S_ = RowSwitchMatrix(R .+ 1, 2) # Trick to convert R vector to a row switching matrix
-    M[n,1] = mult(M[n,1], S_)
-    M[n,2] = mult(M[n,2], S_)
+    S0_rows = Vector{RSMInt}(R)
+    S0_rows .+= 1 # Trick to convert R vector to a row switching matrix
+    S0 = RowSwitchMatrix(S0_rows, 2)
+    M[n,1] = mult(M[n,1], S0)
+    M[n,2] = mult(M[n,2], S0)
     for i=n-1:-1:1
         new_pair = clean1_rlstep(M[i:i+1,:])
         M[i:i+1,:] .= new_pair
@@ -69,7 +71,7 @@ function clean1_rl(bmp::BMP)
     return BMP(clean1_rl(bmp.M, bmp.R), RSMInt[0,1], copy(bmp.order))
 end
 
-function clean1_lr(bmp::BareBMP)::BareBMP
+function clean1_lr(bmp::BareBMP)
     n = size(bmp, 1)
     M = copy(bmp)
     for i=1:n-1
@@ -89,7 +91,7 @@ function clean1_lr(bmp::BMP)
     return BMP(clean1_lr(bmp.M), copy(bmp.R), copy(bmp.order))
 end
 
-function clean1(bmp::BareBMP, R::Vector{<:Integer})::BareBMP
+function clean1(bmp::BareBMP, R::Vector{<:Integer})
     n = size(bmp, 1)
     M = copy(bmp)
     # Left-to-right sweep: eliminate unused rows
@@ -98,8 +100,11 @@ function clean1(bmp::BareBMP, R::Vector{<:Integer})::BareBMP
         M[i:i+1,:] .= new_pair
     end
     # Right-to-left sweep: eliminate duplicate equivalent rows
-    S_ = RowSwitchMatrix(R .+ 1, 2) # Trick to convert R vector to a row switching matrix
-    M[n,:] .= [mult(M[n,1], S_), mult(M[n,2], S_)]
+    S0_rows = Vector{RSMInt}(R)
+    S0_rows .+= 1 # Trick to convert R vector to a row switching matrix
+    S0 = RowSwitchMatrix(S0_rows, 2)
+    M[n,1] = mult(M[n,1], S0)
+    M[n,2] = mult(M[n,2], S0)
     for i=n-1:-1:1
         new_pair = clean1_rlstep(M[i:i+1,:])
         M[i:i+1,:] .= new_pair
