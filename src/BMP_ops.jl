@@ -72,10 +72,46 @@ function erase_var(bmp::BMP, var::Integer, val::Integer)
     return BMP(clean1(M, bmp.R), [0,1], order)
 end
 
+"""
+    compose(bmp::BMP, vars, subs)
+
+COMPOSE operation for BMPs. Given `bmp`, substitute the input bits indicated in
+`vars` with the functions whose BMPs are given in `subs`. `bmp` and the elements
+of `subs` must be defined over the same set of variables and have the same variable
+ordering. This function is mainly used for prepending gates in a circuit.
+"""
+function compose(bmp::BMP, vars::NTuple{N, <:Integer}, subs::NTuple{N, BMP}) where {N}
+    n = length(bmp)
+    mats = bare_bmp(0, n)
+    temp_bmp = copy(bmp.M)
+    temp_tab = fill(0, 2^(N+1))
+    sub_terms = map(x -> x.R, subs)
+    sub_mats = map(x -> x.M, subs)
+    pos = map(i -> bmp.position[i], vars)
+    for val=0:2^N-1
+        for (i,p) in enumerate(pos)
+            bval = val >> (N-i) & 1
+            temp_bmp[p,1] = bmp.M[p, bval+1]
+            temp_bmp[p,2] = bmp.M[p, bval+1]
+        end
+        temp_tab .= 0
+        temp_tab[val + 2^N + 1] = 1
+        t = minapply(temp_tab, (temp_bmp, sub_mats...), (bmp.R, sub_terms...))
+        mats = minapply([0, 1, 1, 1], (mats, t), ([0,1], [0,1]))
+    end
+    return BMP(mats, RSMInt[0,1], copy(bmp.order))
+end
+
 function compose(bmp::BMP, var::Integer, sub::BMP)
-    t1 = apply([0,1,0,0], sub, restrict(bmp, var, 0))
-    t2 = apply([0,0,0,1], sub, restrict(bmp, var, 1))
-    return apply([0,1,1,1], t1, t2)
+    return compose(bmp, (var,), (sub,))
+end
+
+function compose(bmp::BMP, vars, subs)
+    return compose(
+        bmp,
+        ntuple(i -> vars[i], length(vars)),
+        ntuple(i -> subs[i], length(subs))
+    )
 end
 
 function swap!(bmp::BareBMP, i::Integer)
