@@ -56,10 +56,17 @@ end
 """
     apply(htab::AbstractArray, bmps)
 
-Implements the direct-product APPLY operation. `htab` is the truth table of the
-Boolean function being computed; `htab[i]` the output of the function when its inputs
-are set to the bits of `i-1` such that `bmps[1]` corresponds to the most significant bit
-and `bmps[end]` corresponds to the least significant.
+Implements the direct-product APPLY operation. This creates a BMP for the Boolean
+function ``h(f_1(\\vec{x}), \\dotsc, f_k(\\vec{x}))`` from the already known BMPs
+of functions ``f_1,\\dotsc,f_n``.
+
+The truth table of ``h(y_1,\\dotsc,y_k)`` must be given in `htab` such that
+`htab[i]` the output of the function when its inputs ``y_1,\\dotsc,y_k``
+are set to the bits of `i-1` going from most significant to the least, respectively.
+
+The BMPs for ``f_1,\\dotsc,f_n`` must be given in `bmps`, either as a container
+(such as a `NTuple` or `Vector`) or vararg of `BMP`. Where possible, prefer types
+with sizes known at compile time.
 
 See also [`minapply`](@ref).
 """

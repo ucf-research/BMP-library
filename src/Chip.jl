@@ -1,5 +1,13 @@
 # This file is a part of BMP-library. License is Apache 2.0: https://julialang.org/license
 
+"""
+    Chip
+
+A data type that represents the BMP of a reversible function ``\\{0,1\\}^n \\to \\{0,1\\}^n``.
+Each of the `n` bitlines is stored as a `BareBMP` that represents the output on that bitline
+as a function of all the primary inputs. These BMPs are constrained to have the same variable
+ordering and to be in canonical form at all times for easier processing.
+"""
 struct Chip
     bitlines::Vector{BareBMP}
     order::Vector{BMPVarInt}
@@ -12,18 +20,34 @@ struct Chip
     end
 end
 
+"""
+    Chip(n::Integer)
+
+Creates a `Chip` for the identity permutation on `n` bitlines.
+"""
 function Chip(n::Integer)
     return Chip(n, collect(1:n))
 end
 
+"""
+    Chip(circuit::ReversibleCircuit)
+
+Converts `circuit` to a `Chip`. This may be a costly operation
+depending on the circuit.
+"""
 function Chip(circuit::ReversibleCircuit)
     chip = Chip(circuit.n, collect(1:circuit.n))
     for cg in circuit.gates
-        apply_gate!(chip, cg)
+        minapply_gate!(chip, cg)
     end
     return chip
 end
 
+"""
+    volume(chip::Chip)
+
+Returns the sum of the volumes of the BMPs associated with the bitlines.
+"""
 function volume(chip::Chip)
     cnt = 0
     for mats in chip.bitlines
@@ -32,6 +56,12 @@ function volume(chip::Chip)
     return cnt
 end
 
+"""
+    evalfunc(chip::Chip, input::AbstractArray)
+
+Computes the output of the permutation represented by `chip` on inputs given
+in `input`.
+"""
 function evalfunc(chip::Chip, input::AbstractArray)
     n = size(input, 1)
     n_samps = div(length(input), size(input, 1))
@@ -44,6 +74,12 @@ function evalfunc(chip::Chip, input::AbstractArray)
     return reshape(result, size(input))
 end
 
+"""
+    apply_gate!(chip::Chip, tab::Array{<:Integer}, bits)
+
+Realizes the action of a reversible gate given by `tab` on bitlines `bits` of
+`chip`. This method uses the direct-product APPLY operation internally.
+"""
 function apply_gate!(chip::Chip, tab::Array{<:Integer}, bits)
     tensor_bmp = apply_noclean(map(i -> chip.bitlines[i], bits))
     n_bits = length(bits)
@@ -53,10 +89,22 @@ function apply_gate!(chip::Chip, tab::Array{<:Integer}, bits)
     end
 end
 
+"""
+    apply_gate!(chip::Chip, g::ReversibleGate)
+
+Realizes the action of gate `g` on `chip`, using the direct-product APPLY operation
+internally.
+"""
 function apply_gate!(chip::Chip, g::ReversibleGate)
     apply_gate!(chip, g.perm, g.bits)
 end
 
+"""
+    apply_circuit!(chip::Chip, circuit::ReversibleCircuit)
+
+Realizes the action of all the gates in `circuit` on `chip`. This method uses
+the direct-product APPLY operation internally.
+"""
 function apply_circuit!(chip::Chip, circuit::ReversibleCircuit)
     if circuit.n != length(chip.bitlines)
         throw(DimensionMismatch("Number of bitlines on the chip and the circuit don't match."))
@@ -66,6 +114,12 @@ function apply_circuit!(chip::Chip, circuit::ReversibleCircuit)
     end
 end
 
+"""
+    minapply_gate!(chip::Chip, tab::Array{<:Integer}, bits)
+
+Realizes the action of a reversible gate given by `tab` on bitlines `bits` of
+`chip`. This method uses the direct-sum APPLY operation internally.
+"""
 function minapply_gate!(chip::Chip, tab::Array{<:Integer}, bits)
     sum_bmp, U = minapply_noclean(map(i -> chip.bitlines[i], bits))
     n_bits = length(bits)
@@ -77,10 +131,22 @@ function minapply_gate!(chip::Chip, tab::Array{<:Integer}, bits)
     end
 end
 
+"""
+    minapply_gate!(chip::Chip, g::ReversibleGate)
+
+Realizes the action of gate `g` on `chip`, using the direct-sum APPLY operation
+internally.
+"""
 function minapply_gate!(chip::Chip, g::ReversibleGate)
     minapply_gate!(chip, g.perm, g.bits)
 end
 
+"""
+    minapply_circuit!(chip::Chip, circuit::ReversibleCircuit)
+
+Realizes the action of all the gates in `circuit` on `chip`. This method uses
+the direct-sum APPLY operation internally.
+"""
 function minapply_circuit!(chip::Chip, circuit::ReversibleCircuit)
     if circuit.n != length(chip.bitlines)
         throw(DimensionMismatch("Number of bitlines on the chip and the circuit don't match."))
@@ -90,6 +156,13 @@ function minapply_circuit!(chip::Chip, circuit::ReversibleCircuit)
     end
 end
 
+"""
+    join_chip(chip::Chip)
+
+Combines all the bitlines of `chip` into a standard BMP with multiple outputs.
+The BMP inherits its input variable ordering from `chip.` On the other hand,
+the outputs are ordered according to their labels.
+"""
 function join_chip(chip::Chip)
     n = length(chip.bitlines)
     mats = Matrix{RowSwitchMatrix}(undef, (n, 2))
@@ -100,4 +173,3 @@ function join_chip(chip::Chip)
     R[2:2:end] .= 1
     return clean1(BMP(mats, R, copy(chip.order)))
 end
-

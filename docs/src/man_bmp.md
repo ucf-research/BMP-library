@@ -9,14 +9,15 @@ There are a few ways of constructing BMPs. The most basic way is to use the
 inner constructor of the `BMP` type, which allows the user to directly specify
 its fields.
 ```julia
-BMP(M::Matrix{RowSwitchMatrix}, R::Vector{<:Integer}, order::Vector{<:Integer})
+BMP(M::Matrix{RowSwitchMatrix}, R::AbstractArray, order)
 ```
 Here, `M` should have size `(n, 2)` where `n` is the number of input bits. The
 first dimension of this array corresponds to the position on the product, while
 the second one corresponds to the value of the input bit at this position. The
-`order` array must be of length `n`, consistent with `M`, and specifies the
-label of the variable in each position. `R` is the terminal vector that
-multiplies to the product.
+`order` must be of length `n`, consistent with `M`, and specifies the label of
+the variable in each position. It can be any kind of iterable. `R` is the
+terminal vector that multiplies to the product, reshaped into a one-dimensional
+array when it's copied.
 
 In most cases, you should not use the inner constructor to create BMPs. The
 starting points for most cases (e.g. when building the BMP for a circuit) are
@@ -25,7 +26,7 @@ of a function that's identically zero or identically one. It can be obtained
 using
 ```julia
 BMP(val::Integer, n::Integer)
-BMP(val::Integer, order::Vector{<:Integer})
+BMP(val::Integer, order)
 ```
 where `val` is the value of the function. The second argument is either `n`, the
 number of input variables, or `order`, which is variable ordering (from which
@@ -37,7 +38,7 @@ A projection function is one that takes multiple inputs and returns one of them
 as input. The interface provided in the library is as follows:
 ```julia
 projbmp(xi::Integer, n::Integer)
-projbmp(xi::Integer, order::Vector{<:Integer})
+projbmp(xi::Integer, order)
 ```
 `xi` is the label (not the position) of the variable that's being projected
 onto. The second argument follows the same conventions as in the constant-value
@@ -71,7 +72,7 @@ bonddims(bmp::BMP)
 ```
 which returns an array containing the number of rows of each matrix along the
 product. Alternatively, if you only need the size of a matrix at a particular
-site you can use
+site, you can use
 ```julia
 bonddims(bmp::BMP, i::Integer)
 ```
@@ -86,6 +87,7 @@ amount of space the BMP uses.
 ```julia
 volume(bmp::BMP)
 ```
+The volume of a BMP is also the number of nodes in the corresponding BDD.
 
 ### Evaluation
 One of the most basic BMP operations is evaluation. This is simply the
@@ -98,8 +100,8 @@ evalfunc(bmp::BMP, x)
 the first dimension. The return value is an array of the same number of
 dimensions. Its size along the first dimension is the number of output bits,
 while the other dimensions match the input array's in size. (As an example, the
-input array for a ``\{0,1\}^6 \to \{0,1\}^4`` function could be an `(6,3,2)`
-array, in which case the size of the output would be `(4,3,2)`.)
+input array for a ``\{0,1\}^6 \to \{0,1\}^4`` function could have size
+`(6,3,2)`, in which case the size of the output would have size `(4,3,2)`.)
 
 Note that the input bits are ordered according to their labels and not
 positions. This ensures that BMPs that are generated the same way but with
@@ -137,8 +139,8 @@ cases.
 An important BMP operation that is used internally by nearly all other
 operations is called CLEAN. This operation compresses the BMP to its smallest
 size possible with row-switching matrices. This operation can be performed
-left-to-right (LTR) or right-to-left, to obtain different types of reductions.
-In order to invoke these manually, you can use
+left-to-right (LTR) or right-to-left (RTL), to obtain different types of
+reductions. In order to invoke these manually, you can use
 ```julia
 clean1_lr(bmp::BMP) # LTR sweep
 clean1_rl(bmp::BMP) # RTL sweep
@@ -164,14 +166,14 @@ complicated functions.
 The most basic version of this operation can be called in one of two different
 ways.
 ```julia
-apply(bmp1::BMP, bmp2::BMP, htab::Vector{<:Integer})
-apply(bmps::Vector{BMP}, htab::Vector{<:Integer})
+apply(htab::AbstractArray, bmps)
+apply(htab::AbstractArray, bmps::BMP...)
 ```
-The first one is (essentially) a specialization of the second one for the
-``k=2`` case. The ``k`` input BMPs are either specified in the array `bmps` or
-in the arguments `bmp1` and `bmp2`. The final argument `htab` is a
-one-dimensional array of length ``2^k``, containing the output value for each
-input word. More explicitly, the value
+The ``k`` input BMPs are either given in a container or as a vararg argument in
+`bmps`. (If possible, prefer the vararg version or a container with fixed
+compile-time size, such as a `Tuple` of `BMP`.) The first argument `htab` is an
+array of length ``2^k``, containing the output value for each input word. More
+explicitly, the value
 ```math
 h(x_1, x_2, \dotsc, x_{k-1}, x_k)
 ```
@@ -179,11 +181,16 @@ is the ``(W+1)``-th element of the array `htab`, where
 ```math
 W = 2^{k-1} x_1 + 2^{k-2} x_2 + \dotsc + 2 x_{k-1} + x_k.
 ```
+Note that `htab` can have any number of dimensions as is convenient for the
+caller, but the function `apply` computes the truth table values based on the
+linear indexing of its elements.
+
 Another version of APPLY called `minapply` exists with the same interface.
 ```julia
-minapply(bmp1::BMP, bmp2::BMP, htab::Vector{<:Integer})
-minapply(bmps::Vector{BMP}, htab::Vector{<:Integer})
+minapply(htab::AbstractArray, bmps)
+minapply(htab::AbstractArray, bmps::BMP...)
 ```
+
 The BMPs generated by `apply` and `minapply` are always the same. The difference
 is the algorithm used by these functions: `apply` is what is referred to as the
 direct-product method, and `minapply` is the direct-sum method. If the bond
@@ -195,15 +202,10 @@ processing.
 The difference between the two methods is clearer with the no-cleaning version
 of each.
 ```julia
-apply_noclean(bmp1::BMP, bmp2::BMP, htab::Vector{<:Integer})
-apply_noclean(bmps::Vector{BMP}, htab::Vector{<:Integer})
-minapply_noclean(bmp1::BMP, bmp2::BMP, htab::Vector{<:Integer})
-minapply_noclean(bmps::Vector{BMP}, htab::Vector{<:Integer})
-```
-Note that these functions are not part of the public interface of the library,
-so you need to import them manually as in
-```julia
-using BinaryMatrixProducts: apply_noclean
+apply_noclean(htab::AbstractArray, bmps)
+apply_noclean(htab::AbstractArray, bmps::BMP...)
+minapply_noclean(htab::AbstractArray, bmps)
+minapply_noclean(htab::AbstractArray, bmps::BMP...)
 ```
 The function arguments work exactly the same way as before. If you need to
 manually trigger compression after using these functions, you must use `clean1`
@@ -226,14 +228,14 @@ x2 = projbmp(2, 3)
 x3 = projbmp(3, 3)
 const1 = BMP(1, 3)
 
-t1 = apply(const1, x1, [0, 1, 1, 0])
-t2 = apply(x2, x3, [0, 0, 0, 1])
-bmp1 = apply(t1, t2, [0, 1, 1, 1])
+t1 = apply([0, 1, 1, 0], const1, x1)
+t2 = apply([0, 0, 0, 1], x2, x3)
+bmp1 = apply([0, 1, 1, 1], t1, t2)
 ```
 We used the XOR operation to obtain the inversion of ``x_1``. In this example,
 the final BMP can also be obtained instead in a single step as
 ```julia
-bmp2 = apply([x1, x2, x3], [1, 1, 1, 1, 0, 0, 0, 1])
+bmp2 = apply([1, 1, 1, 1, 0, 0, 0, 1], x1, x2, x3)
 ```
 You can verify the equivalence of the two BMPs by evaluating them for various
 input values using `evalfunc`.
@@ -252,13 +254,15 @@ A slightly more involved example is the BMP of an adder. This can be constructed
 with the following function.
 ```julia
 function build_adder_bmp(n::Integer)
+    g_bit = [0, 1, 1, 0, 1, 0, 0, 1]
+    g_carry = [0, 0, 0, 1, 0, 1, 1, 1]
     outputs = Vector{BMP}(undef, n+1)
     carry = BMP(0, 2*n)
     for i=1:n
         x = projbmp(i, 2*n)
         y = projbmp(i+n, 2*n)
-        outputs[n+2-i] = apply([x, y, carry], [0, 1, 1, 0, 1, 0, 0, 1])
-        carry = apply([x, y, carry], [0, 0, 0, 1, 0, 1, 1, 1])
+        outputs[n+2-i] = apply(g_bit, x, y, carry)
+        carry = apply(g_carry, x, y, carry)
     end
     outputs[1] = carry
     return outputs
@@ -270,9 +274,9 @@ ordered from the most significant to the least significant.
 ### Working with joint BMPs
 In the adder example, we created a BMP for each of the output bits. It is much
 more convenient in general to have all the outputs in a single BMP. We can
-obtain such a BMP from an array of disjoint BMPs using `joinfuncs`.
+obtain such a BMP from a collection of disjoint BMPs using `joinfuncs`.
 ```julia
-joinfuncs(bmps::Vector{BMP})
+joinfuncs(bmps)
 ```
 The resulting BMP has as outputs all the outputs of the individual BMPs stacked
 on top of each other, in the order they're given.

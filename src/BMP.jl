@@ -5,7 +5,7 @@
 
 An alias for `Matrix{RowSwitchMatrix}`. Describes matrix product without
 the terminal vector or the variable ordering information, for cases where
-these should be handled separately.
+these need to be handled separately.
 """
 const BareBMP = Matrix{RowSwitchMatrix}
 const BMPVarInt = Int16
@@ -14,14 +14,14 @@ const BMPVarInt = Int16
     BMP
 
 The main type used to represent binary matrix products. In addition to the
-matrices, contains fields for the terminal vector and variable ordering.
+matrices, contains fields for the terminal vector and the variable ordering information.
 """
 struct BMP
     M::Matrix{RowSwitchMatrix}
     R::Vector{RSMInt}
     order::Vector{BMPVarInt}
     position::Vector{BMPVarInt}
-    function BMP(M::Matrix{RowSwitchMatrix}, R::AbstractVector, order)
+    function BMP(M::Matrix{RowSwitchMatrix}, R::AbstractArray, order)
         position = fill(BMPVarInt(0), length(order))
         # position is the inverse of the permutation given in order
         position[order] .= 1:length(order)
@@ -54,7 +54,9 @@ end
     BMP(val::Integer, order)
 
 Returns a BMP for the constant function of value `val` with the variable
-ordering `order`.
+ordering `order`. `length(order)` is taken to be the number of input bits;
+and `order` is expected to be an iterable that returns all the values in the
+range `1:length(order)` exactly once.
 """
 function BMP(val::Integer, order)
     mats = bare_bmp(val, length(order))
@@ -188,14 +190,14 @@ function evalfunc(
 end
 
 """
-    evalfunc(bmp::BMP, x)
+    evalfunc(bmp::BMP, x::AbstractArray)
 
 Evaluates the BMP for the inputs given in `x`. `x` can have any number of dimensions and is treated as
-a stack of input vectors that live along the first dimension. In other words, the slice `[:,i1,i2,...]` of the return value
-contains the result of evaluating the BMP for `x[:,i1,i2,...]`. (This means that the first dimension of `x`
-must have size `length(bmp)`; the size of first dimension of the return value is the number of output bits.)
+a stack of input vectors that live along the first dimension. The slice `[:,i1,i2,...]` of the return value
+contains the result of evaluating the BMP for `x[:,i1,i2,...]`. Accordingly, the first dimension of `x`
+must have size `length(bmp)`; the size of first dimension of the return value is the number of output bits.
 
-If performance is concern, `x` should be of type `BitArray`.
+If memory efficiency is a concern, `x` should be of type `BitArray`.
 """
 function evalfunc(bmp::BMP, x::AbstractArray)
     return evalfunc(bmp.M, x, bmp.R, bmp.order)

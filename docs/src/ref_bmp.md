@@ -4,7 +4,7 @@
 ```@docs
 BMP
 BMP(::Integer, ::Integer)
-BMP(::Integer, ::Vector{<:Integer})
+BMP(::Integer, order)
 projbmp
 ```
 
@@ -12,7 +12,7 @@ projbmp
 ```@docs
 length(bmp::BMP)
 bonddims
-volume
+volume(bmp::BMP)
 ```
 
 ## Cleaning
@@ -32,7 +32,7 @@ layerapply
 
 ## Other BMP operations
 ```@docs
-evalfunc
+evalfunc(bmp::BMP, x::AbstractArray)
 insert_var
 erase_var
 restrict
