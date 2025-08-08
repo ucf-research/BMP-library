@@ -15,6 +15,12 @@ bonddims
 volume(bmp::BMP)
 ```
 
+## Utilities
+```@docs
+generate_bmp
+check_equivalence
+```
+
 ## Cleaning
 ```@docs
 clean1_lr
@@ -28,6 +34,7 @@ apply
 minapply
 multiapply
 layerapply
+compose
 ```
 
 ## Other BMP operations

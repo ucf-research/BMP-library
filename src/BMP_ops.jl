@@ -79,6 +79,9 @@ COMPOSE operation for BMPs. Given `bmp`, substitute the input bits indicated in
 `vars` with the functions whose BMPs are given in `subs`. `bmp` and the elements
 of `subs` must be defined over the same set of variables and have the same variable
 ordering. This function is mainly used for prepending gates in a circuit.
+
+`vars` and `subs` can be single values or containers. Where possible, you should use
+options where the sizes of these containers are known at compile time.
 """
 function compose(bmp::BMP, vars::NTuple{N, <:Integer}, subs::NTuple{N, BMP}) where {N}
     n = length(bmp)
