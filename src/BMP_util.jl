@@ -26,7 +26,7 @@ Returns `true` if the arguments `bmp1` and `bmp2` represent the same function,
 BMPs and checks if the result is identically zero.
 """
 function check_equivalence(bmp1::BMP, bmp2::BMP)
-    bmp = minapply_noclean([0, 1, 1, 0], bmp1, bmp2)
+    bmp = minapply([0, 1, 1, 0], bmp1, bmp2; noclean=true)
     return all(bmp.R .== 0)
 end
 
