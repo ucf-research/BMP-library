@@ -93,7 +93,7 @@ function clean1_lr(bmp::BMP)
     return BMP(clean1_lr(bmp.M), copy(bmp.R), copy(bmp.order))
 end
 
-function clean1(bmp::BareBMP, R::Vector{<:Integer})
+function clean1(bmp::BareBMP, R::AbstractArray)
     n = size(bmp, 1)
     M = copy(bmp)
     # Left-to-right sweep: eliminate unused rows
