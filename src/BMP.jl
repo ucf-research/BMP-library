@@ -108,6 +108,32 @@ function Base.length(bmp::BMP)
     return size(bmp.M, 1)
 end
 
+function count_inputs(bmp::BareBMP)
+    return size(bmp, 1)
+end
+
+function count_outputs(bmp::BareBMP)
+    return length(bmp[1,1].rows)
+end
+
+"""
+    count_inputs(bmp::BMP)
+
+Returns the number of input bits of `bmp`.
+"""
+function count_inputs(bmp::BMP)
+    return count_inputs(bmp.M)
+end
+
+"""
+    count_outputs(bmp::BMP)
+
+Returns the number of output bits of `bmp`.
+"""
+function count_outputs(bmp::BMP)
+    return count_outputs(bmp.M)
+end
+
 function bonddims(bmp::BareBMP)
     return [length(m.rows) for m in bmp[:,1]]
 end
