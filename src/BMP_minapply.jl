@@ -1,9 +1,9 @@
 # This file is a part of BMP-library. License is Apache 2.0: https://julialang.org/license
 
 function minapply_term(
-    htab::AbstractArray,
+    htab,
     U::Dict{NTuple{N, RSMInt}, RSMInt},
-    Rs::NTuple{N, <:AbstractArray}
+    Rs
 ) where {N}
     R = Vector{RSMInt}(undef, length(U))
     for (inds, i) in pairs(U)
@@ -13,7 +13,7 @@ function minapply_term(
     return R
 end
 
-function minapply_noclean(bmps::NTuple{N, BareBMP}) where {N}
+function minapply_mats(bmps::NTuple{N, BareBMP}) where {N}
     n = size(bmps[1], 1)
     U = Dict{NTuple{N, RSMInt}, RSMInt}()
     U[ntuple(i -> RSMInt(1), N)] = 1
@@ -41,48 +41,44 @@ function minapply_noclean(bmps::NTuple{N, BareBMP}) where {N}
     return (mats, U)
 end
 
-function minapply_noclean(bmps::BareBMP...)
-    return minapply_noclean(bmps)
+function minapply_mats(bmps::BareBMP...)
+    return minapply_mats(bmps)
 end
 
-function minapply_noclean(bmps::Array{BareBMP})
-    return minapply_noclean(ntuple(i -> bmps[i], length(bmps)))
+function minapply_mats(bmps)
+    return minapply_mats(ntuple(i -> bmps[i], length(bmps)))
 end
 
 function minapply(
-    htab::AbstractArray,
+    htab,
     bmps::NTuple{N, BareBMP},
-    Rs::NTuple{N, <:AbstractArray}
+    Rs::NTuple{N, <:AbstractArray};
+    noclean::Bool=false
 ) where {N}
-    M, U = minapply_noclean(bmps)
+    M, U = minapply_mats(bmps)
     R = minapply_term(htab, U, Rs)
-    return clean1_rl(M, R)
+    if noclean
+        return (M, R)
+    end
+    return (clean1_rl(M, R), RSMInt[0,1])
 end
 
 function minapply(
-    htab::AbstractArray,
+    htab,
     bmps::Array{BareBMP},
-    Rs::AbstractArray{<:AbstractArray}
+    Rs::Array{<:AbstractArray};
+    noclean::Bool=false
 )
-    return minapply(htab, ntuple(i -> bmps[i], length(bmps)), ntuple(i -> Rs[i], length(Rs)))
-end
-
-function minapply_noclean(htab::AbstractArray, bmps::NTuple{N, BMP}) where {N}
-    M, U = minapply_noclean(ntuple(i -> bmps[i].M, N))
-    R = minapply_term(htab, U, ntuple(i -> bmps[i].R, N))
-    return BMP(M, R, copy(bmps[1].order))
-end
-
-function minapply_noclean(htab::AbstractArray, bmps::BMP...)
-    return minapply_noclean(htab, bmps)
-end
-
-function minapply_noclean(htab::AbstractArray, bmps::Array{BMP})
-    return minapply_noclean(htab, ntuple(i -> bmps[i], length(bmps)))
+    return minapply(
+        htab,
+        ntuple(i -> bmps[i], length(bmps)),
+        ntuple(i -> Rs[i], length(Rs));
+        noclean
+    )
 end
 
 """
-    minapply(htab::AbstractArray, bmps)
+    minapply(htab, bmps; noclean::Bool=false)
 
 Implements the direct-sum APPLY operation. This creates a BMP for the Boolean
 function ``h(f_1(\\vec{x}), \\dotsc, f_k(\\vec{x}))`` from the already known BMPs
@@ -98,16 +94,19 @@ with sizes known at compile time.
 
 See also [`apply`](@ref).
 """
-function minapply(htab::AbstractArray, bmps::NTuple{N, BMP}) where {N}
-    M, U = minapply_noclean(ntuple(i -> bmps[i].M, N))
+function minapply(htab, bmps::NTuple{N, BMP}; noclean::Bool=false) where {N}
+    M, U = minapply_mats(ntuple(i -> bmps[i].M, N))
     R = minapply_term(htab, U, ntuple(i -> bmps[i].R, N))
+    if noclean
+        return BMP(M, R, copy(bmps[1].order))
+    end
     return BMP(clean1_rl(M, R), RSMInt[0,1], copy(bmps[1].order))
 end
 
-function minapply(htab::AbstractArray, bmps::BMP...)
-    return minapply(htab, bmps)
+function minapply(htab, bmps::BMP...; noclean::Bool=false)
+    return minapply(htab, bmps; noclean)
 end
 
-function minapply(htab::AbstractArray, bmps::Array{BMP})
-    return minapply(htab, ntuple(i -> bmps[i], length(bmps)))
+function minapply(htab, bmps::Array{BMP}; noclean::Bool=false)
+    return minapply(htab, ntuple(i -> bmps[i], length(bmps)); noclean)
 end

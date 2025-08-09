@@ -1,6 +1,6 @@
 # This file is a part of BMP-library. License is Apache 2.0: https://julialang.org/license
 
-function apply_term(htab::AbstractArray, Rs::NTuple{N, <:AbstractArray}) where {N}
+function apply_term(htab, Rs::NTuple{N, <:AbstractArray}) where {N}
     sz = prod(length.(Rs))
     R = Vector{RSMInt}(undef, sz)
     bvals = ntuple(i -> 2^(i-1), N)
@@ -10,7 +10,11 @@ function apply_term(htab::AbstractArray, Rs::NTuple{N, <:AbstractArray}) where {
     return R
 end
 
-function apply_noclean(bmps::NTuple{N, BareBMP}) where {N}
+function apply_term(htab, Rs)
+    return apply_term(htab, ntuple(i -> Rs[i], length(Rs)))
+end
+
+function apply_mats(bmps::NTuple{N, BareBMP}) where {N}
     n = size(bmps[1], 1)
     mats = Matrix{RowSwitchMatrix}(undef, (n,2))
     for i=1:n, j=1:2
@@ -20,41 +24,40 @@ function apply_noclean(bmps::NTuple{N, BareBMP}) where {N}
     return mats
 end
 
-function apply_noclean(bmps::BareBMP...)
-    apply_noclean(bmps)
+function apply_mats(bmps::BareBMP...)
+    return apply_mats(bmps)
 end
 
-function apply_noclean(bmps::Array{BareBMP})
+function apply_mats(bmps)
+    return apply_mats(ntuple(i -> bmps[i], length(bmps)))
+end
+
+function apply(
+    htab,
+    bmps::NTuple{N, BareBMP},
+    Rs::NTuple{N, <:AbstractArray};
+    noclean::Bool=false
+) where {N}
+    M = apply_mats(bmps)
+    R = apply_term(htab, Rs)
+    if noclean
+        return (M, R)
+    end
+    return (clean1(M, R), RSMInt[0,1])
+end
+
+function apply(
+    htab,
+    bmps::Array{BareBMP},
+    Rs::Array{<:AbstractArray};
+    noclean::Bool=false
+)
     N = length(bmps)
-    return apply_noclean(ntuple(i -> bmps[i], N))
-end
-
-function apply(htab::AbstractArray, bmps::NTuple{N, BareBMP}, Rs::NTuple{N, <:AbstractArray}) where {N}
-    return clean1(apply_noclean(bmps), apply_term(htab, Rs))
-end
-
-function apply(htab::AbstractArray, bmps::Array{BareBMP}, Rs::AbstractArray{<:AbstractArray})
-    N = length(bmps)
-    return apply(htab, ntuple(i -> bmps[i], N), ntuple(i -> Rs[i], N))
-end
-
-function apply_noclean(htab::AbstractArray, bmps::NTuple{N, BMP}) where {N}
-    mats = ntuple(i -> bmps[i].M, N)
-    Rs = ntuple(i -> bmps[i].R, N)
-    return BMP(apply_noclean(mats), apply_term(htab, Rs), copy(bmps[1].order))
-end
-
-function apply_noclean(htab::AbstractArray, bmps::BMP...)
-    return apply_noclean(htab, bmps)
-end
-
-function apply_noclean(htab::AbstractArray, bmps::Array{BMP})
-    N = length(bmps)
-    return apply_noclean(htab, ntuple(i -> bmps[i], N))
+    return apply(htab, ntuple(i -> bmps[i], N), ntuple(i -> Rs[i], N); noclean)
 end
 
 """
-    apply(htab::AbstractArray, bmps)
+    apply(htab, bmps; noclean::Bool=false)
 
 Implements the direct-product APPLY operation. This creates a BMP for the Boolean
 function ``h(f_1(\\vec{x}), \\dotsc, f_k(\\vec{x}))`` from the already known BMPs
@@ -70,21 +73,22 @@ with sizes known at compile time.
 
 See also [`minapply`](@ref).
 """
-function apply(htab::AbstractArray, bmps::NTuple{N, BMP}) where {N}
+function apply(htab, bmps::NTuple{N, BMP}; noclean::Bool=false) where {N}
     mats = ntuple(i -> bmps[i].M, N)
     Rs = ntuple(i -> bmps[i].R, N)
-    return BMP(
-        clean1(apply_noclean(mats), apply_term(htab, Rs)),
-        RSMInt[0,1],
-        copy(bmps[1].order)
-    )
+    M = apply_mats(mats)
+    R = apply_term(htab, Rs)
+    if noclean
+        return BMP(M, R, copy(bmps[1].order))
+    end
+    return BMP(clean1(M, R), RSMInt[0,1], copy(bmps[1].order))
 end
 
-function apply(htab::AbstractArray, bmps::BMP...)
-    return apply(htab, bmps)
+function apply(htab, bmps::BMP...; noclean::Bool=false)
+    return apply(htab, bmps; noclean)
 end
 
-function apply(htab::AbstractArray, bmps::Array{BMP})
+function apply(htab, bmps::Array{BMP}; noclean::Bool=false)
     N = length(bmps)
-    return apply(htab, ntuple(i -> bmps[i], N))
+    return apply(htab, ntuple(i -> bmps[i], N); noclean)
 end

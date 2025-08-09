@@ -1,6 +1,4 @@
 using BinaryMatrixProducts
-using BinaryMatrixProducts: apply_noclean
-using BinaryMatrixProducts: minapply_noclean
 using Test
 using Random
 
@@ -16,13 +14,6 @@ function compute_tab(htab, fns)
     return result
 end
 
-function check_equivalence(bmp1::BMP, bmp2::BMP)
-    n = length(bmp1)
-    bmp0 = BMP(0, n)
-    bmp = minapply([0, 1, 1, 0], bmp1, bmp2)
-    return all(all(m1.rows .== m2.rows) for (m1,m2) in zip(bmp.M, bmp0.M))
-end
-
 @testset "APPLY methods comparison" begin
     n = 8
     for _ in 1:5
@@ -33,8 +24,8 @@ end
         bmp1 = generate_bmp(n, 1, f1)
         bmp2 = generate_bmp(n, 1, f2)
         bmp_h = generate_bmp(n, 1, h)
-        large1 = apply_noclean(htab, bmp1, bmp2)
-        large2 = minapply_noclean(htab, bmp1, bmp2)
+        large1 = apply(htab, bmp1, bmp2; noclean=true)
+        large2 = minapply(htab, bmp1, bmp2; noclean=true)
         @test all(bonddims(large1) .>= bonddims(large2))
         @test check_equivalence(large1, bmp_h)
         @test check_equivalence(large1, large2)
@@ -56,8 +47,8 @@ end
             generate_bmp(n, 1, f3)
         )
         bmp_h = generate_bmp(n, 1, h)
-        large1 = apply_noclean(htab, input_bmps)
-        large2 = minapply_noclean(htab, input_bmps)
+        large1 = apply(htab, input_bmps; noclean=true)
+        large2 = minapply(htab, input_bmps; noclean=true)
         @test all(bonddims(large1) .>= bonddims(large2))
         @test check_equivalence(large1, bmp_h)
         @test check_equivalence(large1, large2)

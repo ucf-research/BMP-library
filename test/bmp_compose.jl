@@ -21,13 +21,6 @@ function compose_table(
     return result
 end
 
-function check_equivalence(bmp1::BMP, bmp2::BMP)
-    n = length(bmp1)
-    bmp0 = BMP(0, n)
-    bmp = minapply([0, 1, 1, 0], bmp1, bmp2)
-    return all(all(m1.rows .== m2.rows) for (m1,m2) in zip(bmp.M, bmp0.M))
-end
-
 @testset "BMP composition" begin
     n = 8
     n_tests = 10

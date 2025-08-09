@@ -99,8 +99,8 @@ function compose(bmp::BMP, vars::NTuple{N, <:Integer}, subs::NTuple{N, BMP}) whe
         end
         temp_tab .= 0
         temp_tab[val + 2^N + 1] = 1
-        t = minapply(temp_tab, (temp_bmp, sub_mats...), (bmp.R, sub_terms...))
-        mats = minapply([0, 1, 1, 1], (mats, t), ([0,1], [0,1]))
+        t, _ = minapply(temp_tab, (temp_bmp, sub_mats...), (bmp.R, sub_terms...))
+        mats, _ = minapply([0, 1, 1, 1], (mats, t), ([0,1], [0,1]))
     end
     return BMP(mats, RSMInt[0,1], copy(bmp.order))
 end

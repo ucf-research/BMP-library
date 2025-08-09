@@ -81,7 +81,7 @@ Realizes the action of a reversible gate given by `tab` on bitlines `bits` of
 `chip`. This method uses the direct-product APPLY operation internally.
 """
 function apply_gate!(chip::Chip, tab::Array{<:Integer}, bits)
-    tensor_bmp = apply_noclean(map(i -> chip.bitlines[i], bits))
+    tensor_bmp = apply_mats(map(i -> chip.bitlines[i], bits))
     n_bits = length(bits)
     for (i,b) in zip(n_bits-1:-1:0, bits)
         bit_tab = tab .>> i .& 1
@@ -121,7 +121,7 @@ Realizes the action of a reversible gate given by `tab` on bitlines `bits` of
 `chip`. This method uses the direct-sum APPLY operation internally.
 """
 function minapply_gate!(chip::Chip, tab::Array{<:Integer}, bits)
-    sum_bmp, U = minapply_noclean(map(i -> chip.bitlines[i], bits))
+    sum_bmp, U = minapply_mats(map(i -> chip.bitlines[i], bits))
     n_bits = length(bits)
     Rs = map(i -> [0,1], bits)
     for (i,b) in zip(n_bits-1:-1:0, bits)
