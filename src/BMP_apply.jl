@@ -53,7 +53,7 @@ function apply(
     noclean::Bool=false
 )
     N = length(bmps)
-    return apply(htab, ntuple(i -> bmps[i], N), ntuple(i -> Rs[i], N); noclean)
+    return apply(htab, ntuple(i -> bmps[i], N), ntuple(i -> Rs[i], N); noclean=noclean)
 end
 
 """
@@ -71,6 +71,10 @@ The BMPs for ``f_1,\\dotsc,f_n`` must be given in `bmps`, either as a container
 (such as a `NTuple` or `Vector`) or vararg of `BMP`. Where possible, prefer types
 with sizes known at compile time.
 
+By default, the CLEAN operation is invoked to reduce the resulting BMP to its
+canonical form. If this is not desired, the keyword argument `noclean` should be
+set to `true`.
+
 See also [`minapply`](@ref).
 """
 function apply(htab, bmps::NTuple{N, BMP}; noclean::Bool=false) where {N}
@@ -85,10 +89,10 @@ function apply(htab, bmps::NTuple{N, BMP}; noclean::Bool=false) where {N}
 end
 
 function apply(htab, bmps::BMP...; noclean::Bool=false)
-    return apply(htab, bmps; noclean)
+    return apply(htab, bmps; noclean=noclean)
 end
 
 function apply(htab, bmps::Array{BMP}; noclean::Bool=false)
     N = length(bmps)
-    return apply(htab, ntuple(i -> bmps[i], N); noclean)
+    return apply(htab, ntuple(i -> bmps[i], N); noclean=noclean)
 end
