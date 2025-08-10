@@ -72,6 +72,30 @@ function erase_var(bmp::BMP, var::Integer, val::Integer)
     return BMP(clean1(M, bmp.R), [0,1], order)
 end
 
+function extract_outputs(bmp::BareBMP, obits; noclean::Bool=false)
+    new_mats = copy(bmp)
+    for j=1:2
+        ncols = new_mats[1,j].ncols
+        vals = [new_mats[1,j].rows[b] for b in obits]
+        new_mats[1,j] = RowSwitchMatrix(vals, ncols)
+    end
+    if noclean
+        return new_mats
+    end
+    return clean1_lr(new_mats)
+end
+
+"""
+    extract_outputs(bmp::BMP, obits; noclean::Bool=false)
+
+Extracts the output bits given in `obits` from `bmp`. Note that the new BMP
+will have output bits in the order they're given in `obits`.
+"""
+function extract_outputs(bmp::BMP, obits; noclean::Bool=false)
+    new_mats = extract_outputs(bmp.M, obits; noclean=noclean)
+    return new_mats
+end
+
 """
     compose(bmp::BMP, vars, subs)
 
