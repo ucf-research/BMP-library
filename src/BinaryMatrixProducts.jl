@@ -10,6 +10,7 @@ export add_gate!, invert_circuit
 include("ReversibleCircuit.jl")
 
 export BMP, projbmp, bonddims, volume
+export count_inputs, count_outputs
 export evalfunc
 export save_bmp, load_bmp
 include("BMP.jl")
@@ -22,6 +23,7 @@ include("BMP_minapply.jl")
 include("BMP_multiapply.jl")
 export insert_var, restrict, erase_var
 export compose
+export extract_outputs
 export joinfuncs
 export swap!, reorder!
 include("BMP_ops.jl")

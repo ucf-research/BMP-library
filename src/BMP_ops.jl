@@ -90,6 +90,9 @@ end
 
 Extracts the output bits given in `obits` from `bmp`. Note that the new BMP
 will have output bits in the order they're given in `obits`.
+
+By default, LTR cleaning will be performed on the resulting BMP. If this is
+not desired, the `noclean` keyword should be set to `true`.
 """
 function extract_outputs(bmp::BMP, obits; noclean::Bool=false)
     new_mats = extract_outputs(bmp.M, obits; noclean=noclean)

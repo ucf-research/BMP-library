@@ -11,6 +11,8 @@ projbmp
 ## Properties
 ```@docs
 length(bmp::BMP)
+count_inputs(bmp::BMP)
+count_outputs(bmp::BMP)
 bonddims
 volume(bmp::BMP)
 ```
@@ -19,6 +21,7 @@ volume(bmp::BMP)
 ```@docs
 generate_bmp
 check_equivalence
+extract_outputs
 ```
 
 ## Cleaning
