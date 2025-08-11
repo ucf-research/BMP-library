@@ -1,5 +1,7 @@
 # This file is a part of BMP-library. License is Apache 2.0: https://julialang.org/license
 
+const GatePermInt = UInt32
+const GateBitInt = Int32
 """
     ReversibleGate
 
@@ -8,8 +10,8 @@ the bitlines that the gate acts on, while `perm` contains the permutation implem
 on those bitlines.
 """
 struct ReversibleGate
-    perm::Vector{UInt32}
-    bits::Vector{Int32}
+    perm::Vector{GatePermInt}
+    bits::Vector{GateBitInt}
     function ReversibleGate(perm, bits)
         # Enforce the number of bits
         if length(perm) != 2^length(bits)
@@ -111,4 +113,35 @@ function invert_circuit(circuit::ReversibleCircuit)
         gates[i] = invert_gate(g)
     end
     return ReversibleCircuit(circuit.n, gates)
+end
+
+"""
+    conjugate_gate(g::ReversibleGate, U::ReversibleCircuit)
+
+Returns the conjugation of `g` by the reversible circuit `U`. This is the circuit
+obtained from `U g U^{-1}`, i.e. with the gates of `U^{-1}` applied first.
+This function tries to remove as many gates as possible while keeping the
+functionality the same.
+"""
+function conjugate_gate(g::ReversibleGate, U::ReversibleCircuit)
+    bnet = BitSet(g.bits)
+    cone = Vector{ReversibleGate}()
+    sizehint!(cone, length(U.gates))
+    for cg in U.gates
+        if isdisjoint(bnet, cg.bits)
+            continue
+        end
+        union!(bnet, cg.bits)
+        push!(cone, cg)
+    end
+    new_gates = Vector{ReversibleGate}()
+    sizehint!(new_gates, 2*length(cone)+1)
+    for cg in Iterators.reverse(U.gates)
+        push!(new_gates, invert_gate(cg))
+    end
+    push!(new_gates, g)
+    for cg in U.gates
+        push!(new_gates, cg)
+    end
+    return ReversibleCircuit(U.n, new_gates)
 end

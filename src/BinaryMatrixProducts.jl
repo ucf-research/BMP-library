@@ -7,6 +7,7 @@ include("RowSwitchMatrix.jl")
 
 export ReversibleGate, ReversibleCircuit
 export add_gate!, invert_circuit
+export invert_gate, conjugate_gate
 include("ReversibleCircuit.jl")
 
 export BMP, projbmp, bonddims, volume
@@ -36,7 +37,7 @@ include("BDD.jl")
 include("Conversions.jl")
 
 export Chip, apply_gate!, minapply_gate!
-export apply_circuit!
+export apply_circuit!, minapply_circuit!
 export join_chip
 include("Chip.jl")
 
