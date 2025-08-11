@@ -210,9 +210,8 @@ function evalfunc(
             result[k,j] = R[mat[k]]
         end
     end
-    shape = [i for i in size(x)]
-    shape[1] = m
-    return reshape(result, Tuple(shape))
+    shape = ntuple(i -> size(x,i+1), ndims(x)-1)
+    return reshape(result, m, shape...)
 end
 
 """
