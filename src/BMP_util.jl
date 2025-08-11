@@ -18,6 +18,20 @@ function generate_bmp(n::Integer, m::Integer, f::AbstractArray)
     return clean1(BMP(mats, f, collect(1:n)))
 end
 
+function check_equivalence(
+    mats1::BareBMP,
+    R1::AbstractArray,
+    mats2::BareBMP,
+    R2::AbstractArray
+)
+    if size(mats1,1) != size(mats2,1)
+        return false
+    end
+    _, U = minapply_mats((mats1, mats2))
+    R = minapply_term([0, 1, 1, 0], U, (R1, R2))
+    return all(v -> v == 0, R)
+end
+
 """
     check_equivalence(bmp1::BMP, bmp2::BMP)
 
@@ -26,7 +40,5 @@ Returns `true` if the arguments `bmp1` and `bmp2` represent the same function,
 BMPs and checks if the result is identically zero.
 """
 function check_equivalence(bmp1::BMP, bmp2::BMP)
-    bmp = minapply([0, 1, 1, 0], bmp1, bmp2; noclean=true)
-    return all(bmp.R .== 0)
+    return check_equivalence(bmp1.M, bmp1.R, bmp2.M, bmp2.R)
 end
-

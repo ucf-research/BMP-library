@@ -44,6 +44,15 @@ function Chip(circuit::ReversibleCircuit)
 end
 
 """
+    count_registers(chip::Chip)
+
+Returns the number of registers of `chip`.
+"""
+function count_registers(chip::Chip)
+    return length(chip.bitlines)
+end
+
+"""
     volume(chip::Chip)
 
 Returns the sum of the volumes of the BMPs associated with the bitlines.
@@ -66,8 +75,9 @@ function evalfunc(chip::Chip, input::AbstractArray)
     n = size(input, 1)
     n_samps = div(length(input), size(input, 1))
     result = similar(input, (n, n_samps))
+    R = RSMInt[0,1]
     for (i,bl) in enumerate(chip.bitlines)
-        temp = evalfunc(bl, input, [0,1], chip.order)
+        temp = evalfunc(bl, input, R, chip.order)
         temp = reshape(temp, (1, n_samps))
         result[i,:] .= temp[1,:]
     end
@@ -172,4 +182,21 @@ function join_chip(chip::Chip)
     R = fill(0, 2*n)
     R[2:2:end] .= 1
     return clean1(BMP(mats, R, copy(chip.order)))
+end
+
+"""
+    check_equivalence(chip1::Chip, chip2::Chip)
+
+Returns `true` if the input arguments represent the same reversible function.
+"""
+function check_equivalence(chip1::Chip, chip2::Chip)
+    R = RSMInt[0, 1]
+    if count_registers(chip1) != count_registers(chip2)
+        return false
+    end
+    flag = true
+    for (p1, p2) in zip(chip1.bitlines, chip2.bitlines)
+        flag &= check_equivalence(p1, R, p2, R)
+    end
+    return flag
 end
