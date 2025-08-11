@@ -77,6 +77,7 @@ function extract_outputs(bmp::BareBMP, obits; noclean::Bool=false)
     for j=1:2
         ncols = new_mats[1,j].ncols
         vals = [new_mats[1,j].rows[b] for b in obits]
+        vals = reshape(vals, :)
         new_mats[1,j] = RowSwitchMatrix(vals, ncols)
     end
     if noclean
@@ -96,7 +97,7 @@ not desired, the `noclean` keyword should be set to `true`.
 """
 function extract_outputs(bmp::BMP, obits; noclean::Bool=false)
     new_mats = extract_outputs(bmp.M, obits; noclean=noclean)
-    return new_mats
+    return BMP(new_mats, copy(bmp.R), copy(bmp.order))
 end
 
 """
@@ -206,23 +207,27 @@ function reorder!(bmp, pord::Vector{<:Integer})
 end
 
 """
-    joinfuncs(bmps::Vector{BMP})
+    joinfuncs(bmps)
 
 Generates a joint BMP of the functions represented by the elements of `bmps`.
 The outputs bits of the BMPs in `bmps` are stacked on top of each other in the
 order they are given in `bmps`.
 """
-function joinfuncs(bmps::Vector{BMP})
+function joinfuncs(bmps)
     n = size(bmps[1].M, 1)
     mats = Matrix{RowSwitchMatrix}(undef, (n, 2))
     for i=1:n, j=1:2
-        mats[i,j] = dsum([bmp.M[i,j] for bmp in bmps])
+        mats[i,j] = dsum(map(x -> x.M[i,j], bmps))
     end
-    R = fill(0, sum(length.(bmp.R for bmp in bmps)))
+    R = fill(0, sum(length(bmp.R) for bmp in bmps))
     stride = 0
     for bmp in bmps
         R[stride+1:stride+length(bmp.R)] .= bmp.R
         stride += length(bmp.R)
     end
     return clean1(BMP(mats, R, copy(bmps[1].order)))
+end
+
+function joinfuncs(bmps::BMP...)
+    return joinfuncs(bmps)
 end

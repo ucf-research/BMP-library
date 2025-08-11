@@ -53,16 +53,17 @@ function kron(mats::Vector{RowSwitchMatrix})
     return kron(mats...)
 end
 
-function dsum(mats::Vector{RowSwitchMatrix})
-    nrows = sum(length.(m.rows for m in mats))
+function dsum(mats)
+    nrows = sum(length(m.rows) for m in mats)
     ncols = sum(m.ncols for m in mats)
     array = fill(RSMInt(0), nrows)
     rstride = 0
     cstride = 0
     for m in mats
         mr = length(m.rows)
-        array[rstride+1:rstride+mr] .+= cstride
-        array[rstride+1:rstride+mr] .+= m.rows
+        for i=1:mr
+            array[rstride+i] += cstride + m.rows[i]
+        end
         rstride += mr
         cstride += m.ncols
     end

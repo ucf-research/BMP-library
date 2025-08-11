@@ -41,5 +41,15 @@ using Random
         reorder!(bmp0, order)
         @test all(evalfunc(bmp0, tests0) .== tests_out)
     end
+    #
+    bmps = [generate_bmp(n, 1, rand(0:1, 2^n)) for _ in 1:8]
+    joint_bmp = joinfuncs(bmps)
+    tests_in = bitrand(n, 10)
+    tests_out = evalfunc(joint_bmp, tests_in)
+    for (i, bmp) in enumerate(bmps)
+        @test all(reshape(evalfunc(bmp, tests_in), :) .== tests_out[i,:])
+        bmp_ = extract_outputs(joint_bmp, i)
+        @test check_equivalence(bmp, bmp_)
+    end
 end
 
