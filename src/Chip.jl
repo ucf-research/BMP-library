@@ -6,7 +6,7 @@ struct Chip
     position::Vector{UInt32}
     function Chip(n::Integer, order::Vector{<:Integer})
         position = fill(UInt32(0), length(order))
-        position[order] .= order
+        position[order] .= 1:length(order)
         bitlines = [projbmp_bare(xi, n) for xi in position]
         return new(bitlines, order, position)
     end
