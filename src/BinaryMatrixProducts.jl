@@ -5,10 +5,13 @@ module BinaryMatrixProducts
 export RSMInt, RowSwitchMatrix
 include("RowSwitchMatrix.jl")
 
-export ReversibleCircuit, add_gate!, invert_circuit
+export ReversibleGate, ReversibleCircuit
+export add_gate!, invert_circuit
+export invert_gate, conjugate_gate
 include("ReversibleCircuit.jl")
 
 export BMP, projbmp, bonddims, volume
+export count_inputs, count_outputs
 export evalfunc
 export save_bmp, load_bmp
 include("BMP.jl")
@@ -21,11 +24,12 @@ include("BMP_minapply.jl")
 include("BMP_multiapply.jl")
 export insert_var, restrict, erase_var
 export compose
+export extract_outputs
 export joinfuncs
 export swap!, reorder!
 include("BMP_ops.jl")
 
-export generate_bmp
+export generate_bmp, check_equivalence
 include("BMP_util.jl")
 
 export BDD, volume, reduce_bdd!, swap!, save_bdd, load_bdd
@@ -33,7 +37,7 @@ include("BDD.jl")
 include("Conversions.jl")
 
 export Chip, apply_gate!, minapply_gate!
-export apply_circuit!
+export apply_circuit!, minapply_circuit!
 export join_chip
 include("Chip.jl")
 

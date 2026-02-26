@@ -20,7 +20,7 @@ function RowSwitchMatrix(n::Integer)
     return RowSwitchMatrix(Vector{RSMInt}(1:n), n)
 end
 
-function mult(a::RowSwitchMatrix, b::RowSwitchMatrix)::RowSwitchMatrix
+function mult(a::RowSwitchMatrix, b::RowSwitchMatrix)
     if length(b.rows) != a.ncols
         throw(DimensionMismatch("Number of columns of a must equal the number of rows of b."))
     end
@@ -33,59 +33,37 @@ function mult_inplace(a::Vector{<:Integer}, b::RowSwitchMatrix)
     end
 end
 
-function kron(a::RowSwitchMatrix, b::RowSwitchMatrix)::RowSwitchMatrix
-    Na = length(a.rows)
-    Nb = length(b.rows)
-    Ma = a.ncols
-    Mb = b.ncols
-    return RowSwitchMatrix(
-        [(a.rows[k÷Nb+1]-1)*Mb + b.rows[k%Nb+1]
-            for k in 0:(Na*Nb-1)],
-        Ma * Mb
-    )
+function kron(mats::NTuple{N, RowSwitchMatrix}) where {N}
+    nrows = prod(length(m.rows) for m in mats)
+    cstrides = cumprod(m.ncols for m in Iterators.reverse(mats))
+    S = Vector{RSMInt}(undef, nrows)
+    data = reverse(map(m -> m.rows, mats))
+    for (i, rs) in enumerate(Iterators.product(data...))
+        col = rs[1] + sum(cstrides[i-1] * (rs[i]-1) for i=2:N)
+        S[i] = col
+    end
+    return RowSwitchMatrix(S, cstrides[N])
 end
 
-function kron(mats::Vector{RowSwitchMatrix})::RowSwitchMatrix
-    k = length(mats)
-    rcnt = length.(m.rows for m in mats)
-    nrows = prod(rcnt)
-    rind = fill(1, k)
-    ccnt = collect(m.ncols for m in mats)
-    ncols = prod(ccnt)
-    cind = [mats[i].rows[rind[i]] for i=1:k]
-    cstride = fill(1, k)
-    for i=k-1:-1:1
-        cstride[i] = cstride[i+1] * mats[i+1].ncols
-    end
-    array = fill(RSMInt(0), nrows)
-    for i in 1:nrows
-        val = sum((vi-1) * st for (vi, st) in zip(cind, cstride))
-        array[i] = val + 1
-        rind[k] += 1
-        j = k
-        while rind[j] > rcnt[j] && j > 1
-            rind[j] = 1
-            cind[j] = mats[j].rows[1]
-            rind[j-1] += 1
-            j -= 1
-        end
-        if i != nrows
-            cind[j] = mats[j].rows[rind[j]]
-        end
-    end
-    return RowSwitchMatrix(array, ncols)
+function kron(mats::RowSwitchMatrix...)
+    return kron(mats)
 end
 
-function dsum(mats::Vector{RowSwitchMatrix})::RowSwitchMatrix
-    nrows = sum(length.(m.rows for m in mats))
+function kron(mats::Vector{RowSwitchMatrix})
+    return kron(mats...)
+end
+
+function dsum(mats)
+    nrows = sum(length(m.rows) for m in mats)
     ncols = sum(m.ncols for m in mats)
     array = fill(RSMInt(0), nrows)
     rstride = 0
     cstride = 0
     for m in mats
         mr = length(m.rows)
-        array[rstride+1:rstride+mr] .+= cstride
-        array[rstride+1:rstride+mr] .+= m.rows
+        for i=1:mr
+            array[rstride+i] += cstride + m.rows[i]
+        end
         rstride += mr
         cstride += m.ncols
     end

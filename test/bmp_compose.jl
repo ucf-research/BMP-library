@@ -5,14 +5,17 @@ using Random
 function compose_table(
     n::Integer,
     f::Vector{<:Integer},
-    var::Integer,
-    g::Vector{<:Integer}
+    vars,
+    subs
 )
     result = Vector{Int64}(undef, 2^n)
     for val=0:2^n-1
-        b = g[val+1]
-        mask = (2^n - 1) ⊻ (1 << (n-var))
-        fval = (val & mask) | (b << (n-var))
+        fval = val
+        for (v, g) in zip(vars, subs)
+            b = g[val+1]
+            mask = ((fval >> (n-v) & 1) ⊻ b) << (n-v)
+            fval = fval ⊻ mask
+        end
         result[val+1] = f[fval+1]
     end
     return result
@@ -20,15 +23,24 @@ end
 
 @testset "BMP composition" begin
     n = 8
-    f = rand(0:1, 2^n)
-    g = rand(0:1, 2^n)
-    bmp_f = generate_bmp(n, 1, f)
-    bmp_g = generate_bmp(n, 1, g)
-    for vi=1:n
-        h = compose_table(n, f, vi, g)
-        bmp0 = generate_bmp(n, 1, h)
-        bmp1 = compose(bmp_f, vi, bmp_g)
-        tests_in = bitrand(n, 1000)
-        @test all(evalfunc(bmp0, tests_in) .== evalfunc(bmp1, tests_in))
+    n_tests = 10
+    for _ in 1:n_tests
+        f = rand(0:1, 2^n)
+        subs = ntuple(i -> rand(0:1, 2^n), 3)
+        var_perm = randperm(n)
+        vars = ntuple(i -> var_perm[i], 3)
+        h = compose_table(n, f, vars, subs)
+        #
+        var_order = randperm(n)
+        bmp_f = generate_bmp(n, 1, f)
+        reorder!(bmp_f, var_order)
+        sub_bmps = ntuple(i -> generate_bmp(n, 1, subs[i]), 3)
+        for i=1:3
+            reorder!(sub_bmps[i], var_order)
+        end
+        bmp_h = generate_bmp(n, 1, h)
+        reorder!(bmp_h, var_order)
+        bmp = compose(bmp_f, vars, sub_bmps)
+        @test check_equivalence(bmp_h, bmp)
     end
 end

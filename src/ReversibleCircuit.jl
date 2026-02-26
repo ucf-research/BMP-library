@@ -1,9 +1,18 @@
 # This file is a part of BMP-library. License is Apache 2.0: https://julialang.org/license
 
+const GatePermInt = UInt32
+const GateBitInt = Int32
+"""
+    ReversibleGate
+
+A data type that encapsulates a gate in a reversible circuit. The `bits` field indicates
+the bitlines that the gate acts on, while `perm` contains the permutation implemented
+on those bitlines.
+"""
 struct ReversibleGate
-    perm::Vector{UInt32}
-    bits::Vector{Int32}
-    function ReversibleGate(perm::Vector{<:Integer}, bits::Vector{<:Integer})
+    perm::Vector{GatePermInt}
+    bits::Vector{GateBitInt}
+    function ReversibleGate(perm, bits)
         # Enforce the number of bits
         if length(perm) != 2^length(bits)
             throw(DimensionMismatch("The permutation table of the gate does not have the correct number of entries."))
@@ -12,6 +21,12 @@ struct ReversibleGate
     end
 end
 
+"""
+    invert_gate(gate::ReversibleGate)
+
+Returns the inverse of `gate`. This is a gate that acts on the same bitlines as `gate`,
+but with the inverse of the permutation implemented by `gate`.
+"""
 function invert_gate(gate::ReversibleGate)
     iperm = copy(gate.perm)
     for (i, val) in enumerate(gate.perm)
@@ -21,6 +36,12 @@ function invert_gate(gate::ReversibleGate)
     return ReversibleGate(iperm, ibits)
 end
 
+"""
+    ReversibleGate
+
+A data type that encapsulates a reversible circuit. This is essentially an ordered
+collection of `ReversibleGate`s.
+"""
 struct ReversibleCircuit
     n::Int32
     gates::Vector{ReversibleGate}
@@ -32,6 +53,13 @@ struct ReversibleCircuit
     end
 end
 
+"""
+    evalfunc(circuit::ReversibleCircuit, input::AbstractArray)
+
+Evaluates the circuit for the inputs given in `input`. This is done gate by gate.
+`input` specifies the input vectors following the same convention as in `evalfunc` for
+`BMP`, such that a slice (:,i1,i2,...,ik) is one input set.
+"""
 function evalfunc(circuit::ReversibleCircuit, input::AbstractArray)
     n = size(input, 1)
     if n != circuit.n
@@ -53,14 +81,31 @@ function evalfunc(circuit::ReversibleCircuit, input::AbstractArray)
     return reshape(input_, size(input))
 end
 
-function add_gate!(circuit::ReversibleCircuit, perm::Vector{<:Integer}, bits::Vector{<:Integer})
+"""
+    add_gate!(circuit::ReversibleGate, perm, bits)
+
+Adds a gate specified by a permutation `perm` and bitlines `bits` to the gate. The added
+gate acts after all the existing gates in the circuit.
+"""
+function add_gate!(circuit::ReversibleCircuit, perm, bits)
     push!(circuit.gates, ReversibleGate(perm, bits))
 end
 
+"""
+    add_gate!(circuit::ReversibleCircuit, gate::ReversibleGate)
+
+Adds a gate specified by a permutation `perm` and bitlines `bits` to the gate. The added
+gate acts after all the existing gates in the circuit.
+"""
 function add_gate!(circuit::ReversibleCircuit, gate::ReversibleGate)
     push!(circuit.gates, gate)
 end
 
+"""
+    invert_circuit(circuit::ReversibleCircuit)
+
+Returns the inversion of `circuit`.
+"""
 function invert_circuit(circuit::ReversibleCircuit)
     n_gates = length(circuit.gates)
     gates = similar(circuit.gates, n_gates)
@@ -68,4 +113,35 @@ function invert_circuit(circuit::ReversibleCircuit)
         gates[i] = invert_gate(g)
     end
     return ReversibleCircuit(circuit.n, gates)
+end
+
+"""
+    conjugate_gate(g::ReversibleGate, U::ReversibleCircuit)
+
+Returns the conjugation of `g` by the reversible circuit `U`. This is the circuit
+obtained from `U g U^{-1}`, i.e. with the gates of `U^{-1}` applied first.
+This function tries to remove as many gates as possible while keeping the
+functionality the same.
+"""
+function conjugate_gate(g::ReversibleGate, U::ReversibleCircuit)
+    bnet = BitSet(g.bits)
+    cone = Vector{ReversibleGate}()
+    sizehint!(cone, length(U.gates))
+    for cg in U.gates
+        if isdisjoint(bnet, cg.bits)
+            continue
+        end
+        union!(bnet, cg.bits)
+        push!(cone, cg)
+    end
+    new_gates = Vector{ReversibleGate}()
+    sizehint!(new_gates, 2*length(cone)+1)
+    for cg in Iterators.reverse(U.gates)
+        push!(new_gates, invert_gate(cg))
+    end
+    push!(new_gates, g)
+    for cg in U.gates
+        push!(new_gates, cg)
+    end
+    return ReversibleCircuit(U.n, new_gates)
 end

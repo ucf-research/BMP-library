@@ -34,6 +34,7 @@ run `make.jl` under the `docs` folder:
 ```
 $ git clone https://github.com/ucf-research/BMP-library.git
 $ cd BMP-library/docs
+$ julia --project -e "using Pkg; Pkg.instantiate()"
 $ julia --project make.jl
 ```
 The documentation can then be accessed through `index.html` under

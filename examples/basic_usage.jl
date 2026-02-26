@@ -7,9 +7,9 @@ let
     x3 = projbmp(3, 3)
 
     # Construct functions out of these using APPLY
-    g = apply(x1, x3, [0, 0, 0, 1]) # g(x) = x1 & x3
-    h = apply([x1, x2, x3], [0, 0, 0, 0, 0, 0, 1, 0]) # h(x) = x1 & x2 & ~x3
-    f = apply([g, h], [0, 1, 1, 1]) # f(x) = g(x) | h(x)
+    g = apply([0, 0, 0, 1], x1, x3) # g(x) = x1 & x3
+    h = apply([0, 0, 0, 0, 0, 0, 1, 0], [x1, x2, x3]) # h(x) = x1 & x2 & ~x3
+    f = apply([0, 1, 1, 1], [g, h]) # f(x) = g(x) | h(x)
 
     # Check the outputs of these functions for a few inputs
     @show evalfunc(g, [1, 0, 1]) # = 1
@@ -18,9 +18,9 @@ let
 
     # apply uses the direct product method
     # For the direct sum method, use minapply
-    g_ = minapply(x1, x3, [0, 0, 0, 1])
-    h_ = minapply([x1, x2, x3], [0, 0, 0, 0, 0, 0, 1, 0])
-    f_ = minapply([g, h], [0, 1, 1, 1])
+    g_ = minapply([0, 0, 0, 1], x1, x3)
+    h_ = minapply([0, 0, 0, 0, 0, 0, 1, 0], [x1, x2, x3])
+    f_ = minapply([0, 1, 1, 1], [g, h])
 
     # The resulting BMPs are equivalent
     # Check this from the bond dimensions

@@ -4,15 +4,24 @@
 ```@docs
 BMP
 BMP(::Integer, ::Integer)
-BMP(::Integer, ::Vector{<:Integer})
+BMP(::Integer, order)
 projbmp
 ```
 
 ## Properties
 ```@docs
 length(bmp::BMP)
+count_inputs(bmp::BMP)
+count_outputs(bmp::BMP)
 bonddims
-volume
+volume(bmp::BMP)
+```
+
+## Utilities
+```@docs
+generate_bmp
+check_equivalence
+extract_outputs
 ```
 
 ## Cleaning
@@ -28,11 +37,12 @@ apply
 minapply
 multiapply
 layerapply
+compose
 ```
 
 ## Other BMP operations
 ```@docs
-evalfunc
+evalfunc(bmp::BMP, x::AbstractArray)
 insert_var
 erase_var
 restrict

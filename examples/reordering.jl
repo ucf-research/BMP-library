@@ -7,7 +7,7 @@ let
     for i=1:2:n
         xl = projbmp(i, n)
         xr = projbmp(i+1, n)
-        temp = apply([f, xl, xr], [0, 0, 0, 1, 1, 1, 1, 1]) # f = f + xl xr
+        temp = apply([0, 0, 0, 1, 1, 1, 1, 1], [f, xl, xr]) # f = f + xl xr
         f = temp
     end
 

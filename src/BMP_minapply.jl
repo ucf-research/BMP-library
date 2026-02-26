@@ -1,154 +1,116 @@
 # This file is a part of BMP-library. License is Apache 2.0: https://julialang.org/license
 
 function minapply_term(
-    U::Vector{Tuple{RSMInt, RSMInt}},
-    R1::Vector{<:Integer},
-    R2::Vector{<:Integer},
-    htab::Vector{<:Integer}
-)
-    R = fill(RSMInt(0), length(U))
-    for (i,pair) in enumerate(U)
-        i1, i2 = pair
-        val = 2 * R1[i1] + R2[i2]
+    htab,
+    U::Dict{NTuple{N, RSMInt}, RSMInt},
+    Rs
+) where {N}
+    R = Vector{RSMInt}(undef, length(U))
+    for (inds, i) in pairs(U)
+        val = sum(2^(N-j) * Rs[j][inds[j]] for j=1:N)
         R[i] = htab[val+1]
     end
     return R
 end
 
-function minapply_noclean(
-    bmp1::BareBMP,
-    bmp2::BareBMP
-)
-    n = size(bmp1,1)
-    U = [(RSMInt(1),RSMInt(1))]
-    mats = Matrix{RowSwitchMatrix}(undef, (n,2))
-    for i in axes(bmp1,1)
-        A = Dict{Tuple{RSMInt, RSMInt}, RSMInt}()
-        sizehint!(A, 2 * length(U))
-        S0 = [get!(A, (bmp1[i,1].rows[i1], bmp2[i,1].rows[i2]), length(A)+1)
-            for (i1, i2) in U]
-        S1 = [get!(A, (bmp1[i,2].rows[i1], bmp2[i,2].rows[i2]), length(A)+1)
-            for (i1, i2) in U]
-        mats[i,1] = RowSwitchMatrix(S0, length(A))
-        mats[i,2] = RowSwitchMatrix(S1, length(A))
-        U = fill((RSMInt(0), RSMInt(0)), length(A))
-        for k in keys(A)
-            U[A[k]] = k
-        end
-    end
-    return (mats, U)
-end
-
-function minapply(
-    bmp1::BareBMP,
-    bmp2::BareBMP,
-    R1::Vector{<:Integer},
-    R2::Vector{<:Integer},
-    htab::Vector{<:Integer}
-)
-    M, U = minapply_noclean(bmp1, bmp2)
-    R = minapply_term(U, R1, R2, htab)
-    return clean1_rl(M, R)
-end
-
-function minapply_noclean(bmp1::BMP, bmp2::BMP, htab::Vector{<:Integer})
-    M, U = minapply_noclean(bmp1.M, bmp2.M)
-    return BMP(M, minapply_term(U, bmp1.R, bmp2.R, htab), copy(bmp1.order))
-end
-
-"""
-    minapply(bmp1::BMP, bmp2::BMP, htab::Vector{<:Integer})
-
-Returns the result of the direct-sum APPLY method performed on `bmp1` and
-`bmp2`. The truth table of the function is given in `htab` in the order where
-`bmp1` value is the most significant bit.
-
-See also [`apply`](@ref).
-"""
-function minapply(bmp1::BMP, bmp2::BMP, htab::Vector{<:Integer})::BMP
-    M, U = minapply_noclean(bmp1.M, bmp2.M)
-    R = minapply_term(U, bmp1.R, bmp2.R, htab)
-    return BMP(clean1_rl(M, R), RSMInt[0,1], copy(bmp1.order))
-end
-
-function minapply_noclean(bmps::Vector{BareBMP})
+function minapply_mats(bmps::NTuple{N, BareBMP}) where {N}
     n = size(bmps[1], 1)
-    k = length(bmps)
-    init_view = CustomView(fill(RSMInt(1), k), 1, k)
-    U = Dict{CustomView, RSMInt}()
-    U[init_view] = 1
+    U = Dict{NTuple{N, RSMInt}, RSMInt}()
+    U[ntuple(i -> RSMInt(1), N)] = 1
     mats = Matrix{RowSwitchMatrix}(undef, (n,2))
-    site_mats = Matrix{RowSwitchMatrix}(undef, (k,2))
     for i=1:n
-        for b=1:2, j=1:k
-            site_mats[j,b] = bmps[j][i,b]
-        end
-        chi = length(U)
-        A = propagate_mat(U, site_mats)
-        #
-        U = Dict{CustomView, RSMInt}()
-        sizehint!(U, 2 * chi)
-        S = [fill(RSMInt(0), chi), fill(RSMInt(0), chi)]
-        for b=0:1
-            for r=1:chi
-                rbegin = A.rbegin[r + b * chi]
-                rend = A.rend[r + b * chi]
-                row_key = CustomView(A.data, rbegin, rend)
-                S[b+1][r] = get!(U, row_key, length(U)+1)
+        A = Dict{NTuple{N, RSMInt}, RSMInt}()
+        sizehint!(A, 2 * length(U))
+        S = [
+            Vector{RSMInt}(undef, length(U)),
+            Vector{RSMInt}(undef, length(U))
+        ]
+        for j=1:2
+            for (rvals, rnum) in pairs(U)
+                # rvals[x]: location of the non-zero column in the bmps[x] block on this row
+                new_rvals = ntuple(x -> bmps[x][i,j].rows[rvals[x]], N)
+                # new_rvals describes the new row obtained after matrix multiplication
+                S[j][rnum] = get!(A, new_rvals, length(A)+1)
             end
         end
-        mats[i,1] = RowSwitchMatrix(S[1], length(U))
-        mats[i,2] = RowSwitchMatrix(S[2], length(U))
+        for j=1:2
+            mats[i,j] = RowSwitchMatrix(S[j], length(A))
+        end
+        U = A
     end
     return (mats, U)
 end
 
-function minapply_term(
-    U::Dict{CustomView, RSMInt},
-    Rs::Vector{<:Vector{<:Integer}},
-    htab::Vector{<:Integer}
-)
-    R = fill(RSMInt(0), length(U))
-    for (vw, k) in pairs(U)
-        val = 0
-        len = vw.re - vw.rb + 1
-        for (i,j) in zip(vw.data[vw.rb:vw.re], 1:len)
-            val = 2 * val + Rs[j][i]
-        end
-        R[k] = htab[val+1]
-    end
-    return R
+function minapply_mats(bmps::BareBMP...)
+    return minapply_mats(bmps)
+end
+
+function minapply_mats(bmps)
+    return minapply_mats(ntuple(i -> bmps[i], length(bmps)))
 end
 
 function minapply(
-    bmps::Vector{BareBMP},
-    Rs::Vector{<:Vector{<:Integer}},
-    htab::Vector{<:Integer}
-)
-    mats, U = minapply_noclean(bmps)
-    R = minapply_term(U, Rs, htab)
-    return clean1_rl(mats, R)
+    htab,
+    bmps::NTuple{N, BareBMP},
+    Rs::NTuple{N, <:AbstractArray};
+    noclean::Bool=false
+) where {N}
+    M, U = minapply_mats(bmps)
+    R = minapply_term(htab, U, Rs)
+    if noclean
+        return (M, R)
+    end
+    return (clean1_rl(M, R), RSMInt[0,1])
 end
 
-function minapply_noclean(bmps::Vector{BMP}, htab::Vector{<:Integer})
-    mats, U = minapply_noclean([bmp.M for bmp in bmps])
-    R = minapply_term(U, [bmp.R for bmp in bmps], htab)
-    return BMP(mats, R, copy(bmps[1].order))
+function minapply(
+    htab,
+    bmps::Array{BareBMP},
+    Rs::Array{<:AbstractArray};
+    noclean::Bool=false
+)
+    return minapply(
+        htab,
+        ntuple(i -> bmps[i], length(bmps)),
+        ntuple(i -> Rs[i], length(Rs));
+        noclean=noclean
+    )
 end
 
 """
-    minapply(bmps::Vector{BMP}, htab::Vector{<:Integer})
+    minapply(htab, bmps; noclean::Bool=false)
 
-Returns the result of the direct-sum APPLY method performed on the elements
-of `bmps`. The truth table of the function is given in `htab`, in the order
-where the most significant bit corresponds to `bmps[1]`.
+Implements the direct-sum APPLY operation. This creates a BMP for the Boolean
+function ``h(f_1(\\vec{x}), \\dotsc, f_k(\\vec{x}))`` from the already known BMPs
+of functions ``f_1,\\dotsc,f_n``.
+
+The truth table of ``h(y_1,\\dotsc,y_k)`` must be given in `htab` such that
+`htab[i]` the output of the function when its inputs ``y_1,\\dotsc,y_k``
+are set to the bits of `i-1` going from most significant to the least, respectively.
+
+The BMPs for ``f_1,\\dotsc,f_n`` must be given in `bmps`, either as a container
+(such as a `NTuple` or `Vector`) or vararg of `BMP`. Where possible, prefer types
+with sizes known at compile time.
+
+By default, the CLEAN operation is invoked to reduce the resulting BMP to its
+canonical form. If this is not desired, the keyword argument `noclean` should be
+set to `true`.
 
 See also [`apply`](@ref).
 """
-function minapply(bmps::Vector{BMP}, htab::Vector{<:Integer})
-    mats, U = minapply_noclean([bmp.M for bmp in bmps])
-    R = minapply_term(U, [bmp.R for bmp in bmps], htab)
-    mats_ = clean1_rl(mats, R)
-    return BMP(mats_, RSMInt[0,1], copy(bmps[1].order))
+function minapply(htab, bmps::NTuple{N, BMP}; noclean::Bool=false) where {N}
+    M, U = minapply_mats(ntuple(i -> bmps[i].M, N))
+    R = minapply_term(htab, U, ntuple(i -> bmps[i].R, N))
+    if noclean
+        return BMP(M, R, copy(bmps[1].order))
+    end
+    return BMP(clean1_rl(M, R), RSMInt[0,1], copy(bmps[1].order))
 end
 
+function minapply(htab, bmps::BMP...; noclean::Bool=false)
+    return minapply(htab, bmps; noclean=noclean)
+end
+
+function minapply(htab, bmps::Array{BMP}; noclean::Bool=false)
+    return minapply(htab, ntuple(i -> bmps[i], length(bmps)); noclean=noclean)
+end

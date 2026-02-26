@@ -5,23 +5,24 @@
 
 An alias for `Matrix{RowSwitchMatrix}`. Describes matrix product without
 the terminal vector or the variable ordering information, for cases where
-these should be handled separately.
+these need to be handled separately.
 """
 const BareBMP = Matrix{RowSwitchMatrix}
+const BMPVarInt = Int16
 
 """
     BMP
 
 The main type used to represent binary matrix products. In addition to the
-matrices, contains fields for the terminal vector and variable ordering.
+matrices, contains fields for the terminal vector and the variable ordering information.
 """
 struct BMP
     M::Matrix{RowSwitchMatrix}
     R::Vector{RSMInt}
-    order::Vector{Int16}
-    position::Vector{Int16}
-    function BMP(M::Matrix{RowSwitchMatrix}, R::Vector{<:Integer}, order::Vector{<:Integer})
-        position = fill(Int16(0), length(order))
+    order::Vector{BMPVarInt}
+    position::Vector{BMPVarInt}
+    function BMP(M::Matrix{RowSwitchMatrix}, R::AbstractArray, order)
+        position = fill(BMPVarInt(0), length(order))
         # position is the inverse of the permutation given in order
         position[order] .= 1:length(order)
         return new(M, R, order, position)
@@ -29,7 +30,7 @@ struct BMP
 end
 
 # Constructors and initializers
-function bare_bmp(val::Integer, n::Integer)::BareBMP
+function bare_bmp(val::Integer, n::Integer)
     mats = Matrix{RowSwitchMatrix}(undef, (n,2))
     for i=1:n-1
         mats[i,:] = [RowSwitchMatrix(1), RowSwitchMatrix(1)]
@@ -46,21 +47,23 @@ Returns a BMP for the constant function of value `val` of `n` input bits.
 """
 function BMP(val::Integer, n::Integer)
     mats = bare_bmp(val, n)
-    return BMP(mats, [0,1], collect(1:n))
+    return BMP(mats, RSMInt[0,1], Vector{BMPVarInt}(1:n))
 end
 
 """
-    BMP(val::Integer, order::Vector{<:Integer})
+    BMP(val::Integer, order)
 
 Returns a BMP for the constant function of value `val` with the variable
-ordering `order`.
+ordering `order`. `length(order)` is taken to be the number of input bits;
+and `order` is expected to be an iterable that returns all the values in the
+range `1:length(order)` exactly once.
 """
-function BMP(val::Integer, order::Vector{<:Integer})
+function BMP(val::Integer, order)
     mats = bare_bmp(val, length(order))
-    return BMP(mats, [0,1], copy(order))
+    return BMP(mats, RSMInt[0,1], Vector{BMPVarInt}(order))
 end
 
-function projbmp_bare(xi::Integer, n::Integer)::BareBMP
+function projbmp_bare(xi::Integer, n::Integer)
     mats = Matrix{RowSwitchMatrix}(undef, (n,2))
     for i=1:xi-1
         mats[i,:] = [RowSwitchMatrix(1), RowSwitchMatrix(1)]
@@ -82,18 +85,18 @@ i.e. the function ``f(x_1,\\dotsc, x_i, \\dotsc, x_n) = x_i``.
 """
 function projbmp(xi::Integer, n::Integer)
     mats = projbmp_bare(xi, n)
-    return BMP(mats, [0,1], collect(1:n))
+    return BMP(mats, RSMInt[0,1], Vector{BMPVarInt}(1:n))
 end
 
 """
-    projbmp(xi::Integer, order::Vector{<:Integer})
+    projbmp(xi::Integer, order)
 
 Returns the BMP of the projection to `xi` for the variable ordering `order`.
 """
-function projbmp(xi::Integer, order::Vector{<:Integer})
+function projbmp(xi::Integer, order)
     pos = findfirst(order .== xi)
     mats = projbmp_bare(pos, length(order))
-    return BMP(mats, [0,1], copy(order))
+    return BMP(mats, RSMInt[0,1], Vector{BMPVarInt}(order))
 end
 
 """
@@ -103,6 +106,32 @@ Returns the number of input bits of `bmp`.
 """
 function Base.length(bmp::BMP)
     return size(bmp.M, 1)
+end
+
+function count_inputs(bmp::BareBMP)
+    return size(bmp, 1)
+end
+
+function count_outputs(bmp::BareBMP)
+    return length(bmp[1,1].rows)
+end
+
+"""
+    count_inputs(bmp::BMP)
+
+Returns the number of input bits of `bmp`.
+"""
+function count_inputs(bmp::BMP)
+    return count_inputs(bmp.M)
+end
+
+"""
+    count_outputs(bmp::BMP)
+
+Returns the number of output bits of `bmp`.
+"""
+function count_outputs(bmp::BMP)
+    return count_outputs(bmp.M)
 end
 
 function bonddims(bmp::BareBMP)
@@ -140,7 +169,7 @@ function max_dim(bmp::BMP)
     return max_dim(bmp.M)
 end
 
-function volume(bmp::BareBMP, R::Vector{<:Integer}=[0,1])
+function volume(bmp::BareBMP, R::AbstractVector)
     return sum(length(m.rows) for m in bmp[:,1]) + length(R)
 end
 
@@ -156,8 +185,8 @@ end
 function evalfunc(
     bmp::BareBMP,
     x::AbstractArray,
-    R::Vector{<:Integer},
-    order::Vector{<:Integer}
+    R::AbstractVector,
+    order
 )
     n = size(bmp, 1)
     m = length(bmp[1,1].rows)
@@ -181,20 +210,19 @@ function evalfunc(
             result[k,j] = R[mat[k]]
         end
     end
-    shape = [i for i in size(x)]
-    shape[1] = m
-    return reshape(result, Tuple(shape))
+    shape = ntuple(i -> size(x,i+1), ndims(x)-1)
+    return reshape(result, m, shape...)
 end
 
 """
-    evalfunc(bmp::BMP, x)
+    evalfunc(bmp::BMP, x::AbstractArray)
 
 Evaluates the BMP for the inputs given in `x`. `x` can have any number of dimensions and is treated as
-a stack of input vectors that live along the first dimension. In other words, the slice `[:,i1,i2,...]` of the return value
-contains the result of evaluating the BMP for `x[:,i1,i2,...]`. (This means that the first dimension of `x`
-must have size `length(bmp)`; the size of first dimension of the return value is the number of output bits.)
+a stack of input vectors that live along the first dimension. The slice `[:,i1,i2,...]` of the return value
+contains the result of evaluating the BMP for `x[:,i1,i2,...]`. Accordingly, the first dimension of `x`
+must have size `length(bmp)`; the size of first dimension of the return value is the number of output bits.
 
-If performance is concern, `x` should be of type `BitArray`.
+If memory efficiency is a concern, `x` should be of type `BitArray`.
 """
 function evalfunc(bmp::BMP, x::AbstractArray)
     return evalfunc(bmp.M, x, bmp.R, bmp.order)

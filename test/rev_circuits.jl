@@ -20,13 +20,14 @@ using Random
         end
         test_inputs = bitrand(n, 1000)
         test_outputs = evalfunc(circ, test_inputs)
+        # Circuit - Chip conversion correctness
         @test all(evalfunc(chip, test_inputs) .== test_outputs)
         chip1 = Chip(circ)
         @test all(evalfunc(chip1, test_inputs) .== test_outputs)
+        # Circuit inversion correctness
         inv_circ = invert_circuit(circ)
         @test all(test_inputs .== evalfunc(inv_circ, test_outputs))
         apply_circuit!(chip1, inv_circ)
-        @test all(max_dim(bl) <= 2 for bl in chip1.bitlines)
-        @test all(test_inputs .== evalfunc(chip1, test_inputs))
+        @test check_equivalence(chip1, Chip(n))
     end
 end

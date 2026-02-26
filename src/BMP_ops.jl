@@ -72,10 +72,77 @@ function erase_var(bmp::BMP, var::Integer, val::Integer)
     return BMP(clean1(M, bmp.R), [0,1], order)
 end
 
+function extract_outputs(bmp::BareBMP, obits; noclean::Bool=false)
+    new_mats = copy(bmp)
+    for j=1:2
+        ncols = new_mats[1,j].ncols
+        vals = [new_mats[1,j].rows[b] for b in obits]
+        vals = reshape(vals, :)
+        new_mats[1,j] = RowSwitchMatrix(vals, ncols)
+    end
+    if noclean
+        return new_mats
+    end
+    return clean1_lr(new_mats)
+end
+
+"""
+    extract_outputs(bmp::BMP, obits; noclean::Bool=false)
+
+Extracts the output bits given in `obits` from `bmp`. Note that the new BMP
+will have output bits in the order they're given in `obits`.
+
+By default, LTR cleaning will be performed on the resulting BMP. If this is
+not desired, the `noclean` keyword should be set to `true`.
+"""
+function extract_outputs(bmp::BMP, obits; noclean::Bool=false)
+    new_mats = extract_outputs(bmp.M, obits; noclean=noclean)
+    return BMP(new_mats, copy(bmp.R), copy(bmp.order))
+end
+
+"""
+    compose(bmp::BMP, vars, subs)
+
+COMPOSE operation for BMPs. Given `bmp`, substitute the input bits indicated in
+`vars` with the functions whose BMPs are given in `subs`. `bmp` and the elements
+of `subs` must be defined over the same set of variables and have the same variable
+ordering. This function is mainly used for prepending gates in a circuit.
+
+`vars` and `subs` can be single values or containers. Where possible, you should use
+options where the sizes of these containers are known at compile time.
+"""
+function compose(bmp::BMP, vars::NTuple{N, <:Integer}, subs::NTuple{N, BMP}) where {N}
+    n = length(bmp)
+    mats = bare_bmp(0, n)
+    temp_bmp = copy(bmp.M)
+    temp_tab = fill(0, 2^(N+1))
+    sub_terms = map(x -> x.R, subs)
+    sub_mats = map(x -> x.M, subs)
+    pos = map(i -> bmp.position[i], vars)
+    for val=0:2^N-1
+        for (i,p) in enumerate(pos)
+            bval = val >> (N-i) & 1
+            temp_bmp[p,1] = bmp.M[p, bval+1]
+            temp_bmp[p,2] = bmp.M[p, bval+1]
+        end
+        temp_tab .= 0
+        temp_tab[val + 2^N + 1] = 1
+        t, _ = minapply(temp_tab, (temp_bmp, sub_mats...), (bmp.R, sub_terms...))
+        mats, _ = minapply([0, 1, 1, 1], (mats, t), ([0,1], [0,1]))
+    end
+    return BMP(mats, RSMInt[0,1], copy(bmp.order))
+end
+
 function compose(bmp::BMP, var::Integer, sub::BMP)
-    t1 = apply(sub, restrict(bmp, var, 0), [0,1,0,0])
-    t2 = apply(sub, restrict(bmp, var, 1), [0,0,0,1])
-    return apply(t1, t2, [0,1,1,1])
+    return compose(bmp, (var,), (sub,))
+end
+
+function compose(bmp::BMP, vars, subs)
+    return compose(
+        bmp,
+        ntuple(i -> vars[i], length(vars)),
+        ntuple(i -> subs[i], length(subs))
+    )
 end
 
 function swap!(bmp::BareBMP, i::Integer)
@@ -140,23 +207,27 @@ function reorder!(bmp, pord::Vector{<:Integer})
 end
 
 """
-    joinfuncs(bmps::Vector{BMP})
+    joinfuncs(bmps)
 
 Generates a joint BMP of the functions represented by the elements of `bmps`.
 The outputs bits of the BMPs in `bmps` are stacked on top of each other in the
 order they are given in `bmps`.
 """
-function joinfuncs(bmps::Vector{BMP})
+function joinfuncs(bmps)
     n = size(bmps[1].M, 1)
     mats = Matrix{RowSwitchMatrix}(undef, (n, 2))
     for i=1:n, j=1:2
-        mats[i,j] = dsum([bmp.M[i,j] for bmp in bmps])
+        mats[i,j] = dsum(map(x -> x.M[i,j], bmps))
     end
-    R = fill(0, sum(length.(bmp.R for bmp in bmps)))
+    R = fill(0, sum(length(bmp.R) for bmp in bmps))
     stride = 0
     for bmp in bmps
         R[stride+1:stride+length(bmp.R)] .= bmp.R
         stride += length(bmp.R)
     end
     return clean1(BMP(mats, R, copy(bmps[1].order)))
+end
+
+function joinfuncs(bmps::BMP...)
+    return joinfuncs(bmps)
 end
